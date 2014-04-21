@@ -1,0 +1,32 @@
+{
+	"name": "pear/HTML_Template_Sigma",
+	"description": "A HTML template engine for PHP.",
+	"minimum-stability": "stable",
+	"license": "PHP License",
+	"authors": [
+		{
+			"name": "Alexey Borzov",
+			"homepage": "https://github.com/sad-spirit",
+			"role": "lead"
+		},
+		{
+			"name": "Daniel O'Connor",
+			"homepage": "https://github.com/CloCkWeRX",
+			"role": "developer"
+		},
+		{
+			"name": "Martin Jansen",
+			"email": "https://github.com/mj",
+			"role": "developer"
+		}
+	],
+	"require": {
+		"php": ">=5.4.0",
+		"ext-ctype": "*"
+	},
+	"autoload": {
+		"files": [
+			"HTML/Template/Sigma.php"
+		]
+	}
+}
