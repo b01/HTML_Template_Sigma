@@ -1,9 +1,19 @@
 {
     "authors": [
         {
-            "email": "avb@php.net",
             "name": "Alexey Borzov",
+            "homepage": "https://github.com/sad-spirit",
             "role": "Lead"
+        },
+        {
+            "name": "Daniel O'Connor",
+            "homepage": "https://github.com/CloCkWeRX",
+            "role": "Developer"
+        },
+        {
+            "name": "Martin Jansen",
+            "email": "https://github.com/mj",
+            "role": "Developer"
         }
     ],
     "autoload": {
