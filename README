@@ -5,7 +5,7 @@ Please report all issues via the PEAR bug tracker: http://pear.php.net/bugs/sear
 Pull requests are welcome.
 
 To test, run either
-$ phpunit tests/
+$ ./vendor/bin/phpunit -c tests/phpunit.xml
   or
 $ pear run-tests -r
 
