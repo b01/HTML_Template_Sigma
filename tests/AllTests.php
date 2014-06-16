@@ -31,13 +31,7 @@ require_once 'PHPUnit/Autoload.php';
  */
 require_once 'System.php';
 
-$GLOBALS['_HTML_Template_Sigma_cache_dir'] = System::mktemp('-d sigma');
-
-// What class are we going to test?
-// It is possible to also use the unit tests to test HTML_Template_ITX, which
-// also implements Integrated Templates API
-$GLOBALS['_HTML_Template_Sigma_IT_class'] = 'Sigma';
-// $GLOBALS['_HTML_Template_Sigma_IT_class'] = 'ITX';
+$GLOBALS['_HTML_Template_Sigma_cache_dir'] = './cache';
 
 chdir(dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR);
 
@@ -45,8 +39,6 @@ require_once dirname(__FILE__) . '/Sigma_api_testcase.php';
 require_once dirname(__FILE__) . '/Sigma_cache_testcase.php';
 require_once dirname(__FILE__) . '/Sigma_usage_testcase.php';
 require_once dirname(__FILE__) . '/Sigma_bug_testcase.php';
-
-require_once 'HTML/Template/' . $GLOBALS['_HTML_Template_Sigma_IT_class'] . '.php';
 
 class HTML_Template_Sigma_AllTests
 {

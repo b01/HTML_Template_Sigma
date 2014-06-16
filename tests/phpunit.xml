@@ -1,8 +1,24 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<phpunit bootstrap="AllTests.php">
+<phpunit bootstrap="../vendor/autoload.php">
+    <php>
+        <var name="_HTML_Template_Sigma_IT_class" value="Sigma" />
+        <var name="_HTML_Template_Sigma_cache_dir" value="E:\Khalifah\Projects\HTML_Template_Sigma\tests\cache" />
+    </php>
     <testsuites>
-        <testsuite name="Sigma Unit Tests">
-            <directory>./</directory>
+        <testsuite name="All">
+            <file>./tests/AllTests.php</file>
+        </testsuite>
+        <testsuite name="API">
+            <file>./tests/Sigma_api_testcase.php</file>
+        </testsuite>
+        <testsuite name="Bug">
+            <file>./tests/Sigma_bug_testcase.php</file>
+        </testsuite>
+        <testsuite name="Cache">
+            <file>./tests/Sigma_cache_testcase.php</file>
+        </testsuite>
+        <testsuite name="Usage">
+            <file>./tests/Sigma_usage_testcase.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

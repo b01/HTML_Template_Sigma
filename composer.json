@@ -28,7 +28,10 @@
 	"autoload": {
         "psr-0": {
             "HTML": "src/HTML/Template/"
-        }
+        },
+        "files": [
+            "src/HTML/Template/Sigma.php"
+        ]
 	},
     "include-path": [
         "./"
