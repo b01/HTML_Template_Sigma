@@ -4,16 +4,24 @@ Please report all issues via the PEAR bug tracker: http://pear.php.net/bugs/sear
 
 Pull requests are welcome.
 
-To test, run either
-$ ./vendor/bin/phpunit -c tests/phpunit.xml
+* To test, run either
+```bash
+./vendor/bin/phpunit -c tests/phpunit.xml
+```
   or
+```bash
 $ pear run-tests -r
+```
 
-To build, simply
+* To build, simply
+```bash
 $ pear package
+```
 
-To install from scratch
+* To install from scratch
+```bash
 $ pear install package.xml
+```
 
-To upgrade
+* To upgrade
 $ pear upgrade -f package.xml
