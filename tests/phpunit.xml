@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<phpunit bootstrap="../vendor/autoload.php">
+<phpunit bootstrap="bootstrap.php">
     <php>
         <var name="_HTML_Template_Sigma_IT_class" value="Sigma" />
-        <var name="_HTML_Template_Sigma_cache_dir" value="E:\Khalifah\Projects\HTML_Template_Sigma\tests\cache" />
     </php>
     <testsuites>
         <testsuite name="All">

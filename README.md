@@ -8,10 +8,6 @@ Pull requests are welcome.
 ```bash
 ./vendor/bin/phpunit -c tests/phpunit.xml
 ```
-  or
-```bash
-$ pear run-tests -r
-```
 
 * To build, simply
 ```bash

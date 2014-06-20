@@ -711,7 +711,7 @@ class HTML_Template_Sigma extends PEAR
      * The function can be used either like setVariable("varname", "value")
      * or with one array $variables["varname"] = "value" given setVariable($variables)
      *
-     * If $value is an array ('key' => 'value', ...) then values from that array 
+     * If $value is an array ('key' => 'value', ...) then values from that array
      * will be assigned to template placeholders of the form {variable.key}, ...
      *
      * @param string|array $variable variable name or array ('varname' => 'value')

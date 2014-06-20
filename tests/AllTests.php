@@ -20,25 +20,14 @@
  * @ignore
  */
 
-if (!defined('PHPUnit_MAIN_METHOD')) {
-    define('PHPUnit_MAIN_METHOD', 'HTML_Template_Sigma_AllTests::main');
-}
-
-require_once 'PHPUnit/Autoload.php';
-
 /**
  * Class for file / directory manipulation from PEAR package
  */
 require_once 'System.php';
-
-$GLOBALS['_HTML_Template_Sigma_cache_dir'] = './cache';
-
-chdir(dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR);
-
-require_once dirname(__FILE__) . '/Sigma_api_testcase.php';
-require_once dirname(__FILE__) . '/Sigma_cache_testcase.php';
-require_once dirname(__FILE__) . '/Sigma_usage_testcase.php';
-require_once dirname(__FILE__) . '/Sigma_bug_testcase.php';
+require_once __DIR__ . '/Sigma_api_testcase.php';
+require_once __DIR__ . '/Sigma_cache_testcase.php';
+require_once __DIR__ . '/Sigma_usage_testcase.php';
+require_once __DIR__ . '/Sigma_bug_testcase.php';
 
 class HTML_Template_Sigma_AllTests
 {
