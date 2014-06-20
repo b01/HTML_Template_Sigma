@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <phpunit bootstrap="bootstrap.php">
-    <php>
-        <var name="_HTML_Template_Sigma_IT_class" value="Sigma" />
-    </php>
     <testsuites>
         <testsuite name="All">
             <directory>.</directory>

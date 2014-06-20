@@ -1,4 +1,4 @@
-<?php
+<?php namespace Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -21,11 +21,6 @@
  */
 
 /**
- * PHPUnit Test Case
- */
-require_once 'PHPUnit/Framework/TestCase.php';
-
-/**
  * Test case for fixed bugs
  *
  * @category    HTML
@@ -34,21 +29,20 @@ require_once 'PHPUnit/Framework/TestCase.php';
  * @version     @package_version@
  * @ignore
  */
-class Sigma_bug_testcase extends PHPUnit_Framework_TestCase
+class BugTest extends \PHPUnit_Framework_TestCase
 {
-   /**
-    * A template object
-    * @var object
-    */
-    var $tpl;
+    /** @var \HTML_Template_Sigma */
+    private $tpl;
+    /** @var  string */
+    private $templatePath;
 
     function setUp()
     {
-        $className = 'HTML_Template_' . $GLOBALS['_HTML_Template_Sigma_IT_class'];
-        $this->tpl = new $className(dirname(__FILE__) . '/templates');
+        $this->templatePath = $GLOBALS['_HTML_Template_Sigma_templates_dir'];
+        $this->tpl = new \HTML_Template_Sigma($this->templatePath);
     }
 
-    function testBug6902()
+    function test_bug_6902()
     {
         if (!OS_WINDOWS) {
             $this->markTestSkipped('Test for a Windows-specific bug');
@@ -56,12 +50,12 @@ class Sigma_bug_testcase extends PHPUnit_Framework_TestCase
         // realpath() on windows will return full path including drive letter
         $this->tpl->setRoot('');
         $this->tpl->setCacheRoot($GLOBALS['_HTML_Template_Sigma_cache_dir']);
-        $result = $this->tpl->loadTemplatefile(realpath(dirname(__FILE__) . '\\templates') . '\\' . 'loadtemplatefile.html');
+        $result = $this->tpl->loadTemplatefile(realpath($this->templatePath) . DIRECTORY_SEPARATOR . 'loadtemplatefile.html');
         if (is_a($result, 'PEAR_Error')) {
             $this->assertTrue(false, 'Error loading template file: '. $result->getMessage());
         }
         $this->assertEquals('A template', trim($this->tpl->get()));
-        $result = $this->tpl->loadTemplatefile(realpath(dirname(__FILE__) . '\\templates') . '\\' . 'loadtemplatefile.html');
+        $result = $this->tpl->loadTemplatefile(realpath($this->templatePath) . DIRECTORY_SEPARATOR . 'loadtemplatefile.html');
         if (is_a($result, 'PEAR_Error')) {
             $this->assertTrue(false, 'Error loading template file: '. $result->getMessage());
         }
