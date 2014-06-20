@@ -473,7 +473,7 @@ class Sigma
             $this->_options[$option] = $value;
             return SIGMA_OK;
         }
-        return $this->raiseError($this->errorMessage(SIGMA_UNKNOWN_OPTION, $option), SIGMA_UNKNOWN_OPTION);
+        return new \Exception($this->errorMessage(SIGMA_UNKNOWN_OPTION, $option), SIGMA_UNKNOWN_OPTION);
     }
 
 
@@ -547,7 +547,7 @@ class Sigma
     function get($block = '__global__', $clear = false)
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         if ('__global__' == $block && !$this->flagGlobalParsed) {
             $this->parse('__global__');
@@ -591,7 +591,7 @@ class Sigma
         static $vars;
 
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         if ('__global__' == $block) {
             $this->flagGlobalParsed = true;
@@ -764,7 +764,7 @@ class Sigma
     function setCurrentBlock($block = '__global__')
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         $this->currentBlock = $block;
         return SIGMA_OK;
@@ -825,7 +825,7 @@ class Sigma
     function touchBlock($block)
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         if (isset($this->_hiddenBlocks[$block])) {
             unset($this->_hiddenBlocks[$block]);
@@ -855,7 +855,7 @@ class Sigma
     function hideBlock($block)
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         if (isset($this->_touchedBlocks[$block])) {
             unset($this->_touchedBlocks[$block]);
@@ -917,7 +917,7 @@ class Sigma
             return $this->_getCached($filename);
         }
         if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
-            return $this->raiseError($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
         }
         $this->_triggers     = array();
         $this->_triggerBlock = '__global__';
@@ -953,16 +953,16 @@ class Sigma
     function addBlock($placeholder, $block, $template)
     {
         if (isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_EXISTS, $block), SIGMA_BLOCK_EXISTS);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_EXISTS, $block), SIGMA_BLOCK_EXISTS);
         }
         $parents = $this->_findParentBlocks($placeholder);
         if (0 == count($parents)) {
-            return $this->raiseError(
+            return new \Exception(
                 $this->errorMessage(SIGMA_PLACEHOLDER_NOT_FOUND, $placeholder), SIGMA_PLACEHOLDER_NOT_FOUND
             );
 
         } elseif (count($parents) > 1) {
-            return $this->raiseError(
+            return new \Exception(
                 $this->errorMessage(SIGMA_PLACEHOLDER_DUPLICATE, $placeholder), SIGMA_PLACEHOLDER_DUPLICATE
             );
         }
@@ -999,7 +999,7 @@ class Sigma
             return $this->_getCached($filename, $block, $placeholder);
         }
         if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
-            return $this->raiseError($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
         }
         list($oldTriggerBlock, $this->_triggerBlock) = array($this->_triggerBlock, $block);
         $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
@@ -1038,7 +1038,7 @@ class Sigma
     function replaceBlock($block, $template, $keepContent = false)
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         // should not throw a error as we already checked for block existance
         $this->_removeBlockData($block, $keepContent);
@@ -1079,7 +1079,7 @@ class Sigma
             }
         }
         if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
-            return $this->raiseError($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
         }
         list($oldTriggerBlock, $this->_triggerBlock) = array($this->_triggerBlock, $block);
         $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
@@ -1120,7 +1120,7 @@ class Sigma
     function placeholderExists($placeholder, $block = '')
     {
         if ('' != $block && !isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         if ('' != $block) {
             // if we search in the specific block, we should just check the array
@@ -1181,7 +1181,7 @@ class Sigma
     function setCallbackFunction($tplFunction, $callback, $preserveArgs = false)
     {
         if (!is_callable($callback)) {
-            return $this->raiseError($this->errorMessage(SIGMA_INVALID_CALLBACK), SIGMA_INVALID_CALLBACK);
+            return new \Exception($this->errorMessage(SIGMA_INVALID_CALLBACK), SIGMA_INVALID_CALLBACK);
         }
         $this->_callback[$tplFunction] = array(
             'data'         => $callback,
@@ -1209,7 +1209,7 @@ class Sigma
     function getBlockList($parent = '__global__', $recursive = false)
     {
         if (!isset($this->_blocks[$parent])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $parent), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $parent), SIGMA_BLOCK_NOT_FOUND);
         }
         if (!$recursive) {
             return isset($this->_children[$parent])? array_keys($this->_children[$parent]): array();
@@ -1240,7 +1240,7 @@ class Sigma
     function getPlaceholderList($block = '__global__')
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         $ret = array();
         foreach ($this->_blockVariables[$block] as $var => $v) {
@@ -1366,7 +1366,7 @@ class Sigma
                 $blockname    = $match[1];
                 $blockcontent = $match[2];
                 if (isset($this->_blocks[$blockname]) || isset($blocks[$blockname])) {
-                    return $this->raiseError(
+                    return new \Exception(
                         $this->errorMessage(SIGMA_BLOCK_DUPLICATE, $blockname), SIGMA_BLOCK_DUPLICATE
                     );
                 }
@@ -1454,22 +1454,22 @@ class Sigma
         // the same checks are done in addBlock()
         if (!empty($placeholder)) {
             if (isset($this->_blocks[$block])) {
-                return $this->raiseError($this->errorMessage(SIGMA_BLOCK_EXISTS, $block), SIGMA_BLOCK_EXISTS);
+                return new \Exception($this->errorMessage(SIGMA_BLOCK_EXISTS, $block), SIGMA_BLOCK_EXISTS);
             }
             $parents = $this->_findParentBlocks($placeholder);
             if (0 == count($parents)) {
-                return $this->raiseError(
+                return new \Exception(
                     $this->errorMessage(SIGMA_PLACEHOLDER_NOT_FOUND, $placeholder), SIGMA_PLACEHOLDER_NOT_FOUND
                 );
 
             } elseif (count($parents) > 1) {
-                return $this->raiseError(
+                return new \Exception(
                     $this->errorMessage(SIGMA_PLACEHOLDER_DUPLICATE, $placeholder), SIGMA_PLACEHOLDER_DUPLICATE
                 );
             }
         }
         if (false === ($content = @file_get_contents($this->_cachedName($filename)))) {
-            return $this->raiseError(
+            return new \Exception(
                 $this->errorMessage(SIGMA_TPL_NOT_FOUND, $this->_cachedName($filename)), SIGMA_TPL_NOT_FOUND
             );
         }
@@ -1593,16 +1593,16 @@ class Sigma
 
         if (function_exists('file_put_contents')) {
             if (false === @file_put_contents($tmpFile, $content)) {
-                return $this->raiseError($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
+                return new \Exception($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
             }
 
         } else {
             // Fall back to previous solution
             if (!($fh = @fopen($tmpFile, 'wb'))) {
-                return $this->raiseError($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
+                return new \Exception($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
             }
             if (!fwrite($fh, $content)) {
-                return $this->raiseError($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
+                return new \Exception($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
             }
             fclose($fh);
         }
@@ -1621,7 +1621,7 @@ class Sigma
             }
         }
 
-        return $this->raiseError($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
+        return new \Exception($this->errorMessage(SIGMA_CACHE_ERROR, $fileName), SIGMA_CACHE_ERROR);
     }
 
     /**
@@ -1670,7 +1670,7 @@ class Sigma
     function _removeBlockData($block, $keepContent = false)
     {
         if (!isset($this->_blocks[$block])) {
-            return $this->raiseError($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         if (!empty($this->_children[$block])) {
             foreach (array_keys($this->_children[$block]) as $child) {
@@ -1915,7 +1915,7 @@ class Sigma
                 } // switch
             } // for
             if (0 != $state) {
-                return $this->raiseError(
+                return new \Exception(
                     $this->errorMessage(
                         SIGMA_CALLBACK_SYNTAX_ERROR,
                         (empty($error) ? 'Unexpected end of input' : $error)
