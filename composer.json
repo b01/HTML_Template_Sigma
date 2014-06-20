@@ -1,5 +1,5 @@
 {
-	"name": "pear/HTML_Template_Sigma",
+	"name": "sigma/sigma",
 	"description": "A HTML template engine for PHP.",
 	"minimum-stability": "stable",
 	"license": "PHP License",
