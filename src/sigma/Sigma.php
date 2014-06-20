@@ -19,11 +19,6 @@
  * @link      http://pear.php.net/package/HTML_Template_Sigma
  */
 
-/**
- * PEAR and PEAR_Error classes (for error handling)
- */
-require_once 'PEAR.php';
-
 /**#@+
  * Error codes
  * @see HTML_Template_Sigma::errorMessage()
@@ -128,7 +123,7 @@ define('SIGMA_CALLBACK_SYNTAX_ERROR',     -14);
 * @version  Release: @package_version@
 * @link     http://pear.php.net/package/HTML_Template_Sigma
 */
-class Sigma extends \PEAR
+class Sigma
 {
     /**
      * First character of a variable placeholder ( _{_VARIABLE} ).
@@ -386,8 +381,6 @@ class Sigma extends \PEAR
      */
     function __construct($root = '', $cacheRoot = '')
     {
-        // the class is inherited from PEAR to be able to use $this->setErrorHandling()
-        $this->PEAR();
         $this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
                                        '(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
         $this->removeVariablesRegExp = '@' . $this->openingDelimiter . '\s*(' . $this->variablenameRegExp . ')\s*'

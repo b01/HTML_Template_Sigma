@@ -44,7 +44,7 @@ class BugTest extends \PHPUnit_Framework_TestCase
 
     function test_bug_6902()
     {
-        if (!OS_WINDOWS) {
+        if (!strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             $this->markTestSkipped('Test for a Windows-specific bug');
         }
         // realpath() on windows will return full path including drive letter
