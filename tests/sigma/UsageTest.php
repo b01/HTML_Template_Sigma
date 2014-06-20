@@ -31,15 +31,12 @@
  */
 class UsageTest extends \PHPUnit_Framework_TestCase
 {
-   /**
-    * A template object
-    * @var object
-    */
+    /** @var \sigma\Sigma */
     private $tpl;
 
     function setUp()
     {
-        $this->tpl = new \HTML_Template_Sigma($GLOBALS['_HTML_Template_Sigma_templates_dir']);
+        $this->tpl = new \sigma\Sigma($GLOBALS['_HTML_Template_Sigma_templates_dir']);
     }
 
     private function _stripWhitespace($str)

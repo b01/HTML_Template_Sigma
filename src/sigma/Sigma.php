@@ -1,4 +1,4 @@
-<?php
+<?php namespace sigma;
 /**
  * Implementation of Integrated Templates API with template 'compilation' added.
  *
@@ -128,7 +128,7 @@ define('SIGMA_CALLBACK_SYNTAX_ERROR',     -14);
 * @version  Release: @package_version@
 * @link     http://pear.php.net/package/HTML_Template_Sigma
 */
-class HTML_Template_Sigma extends PEAR
+class Sigma extends \PEAR
 {
     /**
      * First character of a variable placeholder ( _{_VARIABLE} ).
@@ -384,7 +384,7 @@ class HTML_Template_Sigma extends PEAR
      *
      * @see   setRoot(), setCacheRoot()
      */
-    function HTML_Template_Sigma($root = '', $cacheRoot = '')
+    function __construct($root = '', $cacheRoot = '')
     {
         // the class is inherited from PEAR to be able to use $this->setErrorHandling()
         $this->PEAR();

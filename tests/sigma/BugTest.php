@@ -31,7 +31,7 @@
  */
 class BugTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var \HTML_Template_Sigma */
+    /** @var \sigma\Sigma */
     private $tpl;
     /** @var  string */
     private $templatePath;
@@ -39,7 +39,7 @@ class BugTest extends \PHPUnit_Framework_TestCase
     function setUp()
     {
         $this->templatePath = $GLOBALS['_HTML_Template_Sigma_templates_dir'];
-        $this->tpl = new \HTML_Template_Sigma($this->templatePath);
+        $this->tpl = new \sigma\Sigma($this->templatePath);
     }
 
     function test_bug_6902()

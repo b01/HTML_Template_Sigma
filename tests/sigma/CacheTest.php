@@ -34,12 +34,12 @@
  */
 class CacheTest extends ApiTest
 {
-    /** @var  \HTML_Template_Sigma */
+    /** @var  \sigma\Sigma */
     protected $tpl;
 
     function setUp()
     {
-        $this->tpl = new \HTML_Template_Sigma(
+        $this->tpl = new \sigma\Sigma(
             $GLOBALS['_HTML_Template_Sigma_templates_dir'], $GLOBALS['_HTML_Template_Sigma_cache_dir']
         );
     }

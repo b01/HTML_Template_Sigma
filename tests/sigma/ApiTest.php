@@ -31,13 +31,13 @@
  */
 class ApiTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var \HTML_Template_Sigma */
+    /** @var \Sigma */
     protected $tpl;
 
     function setUp()
     {
         $templatesDir = $GLOBALS['_HTML_Template_Sigma_templates_dir'];
-        $this->tpl = new \HTML_Template_Sigma($templatesDir);
+        $this->tpl = new \sigma\Sigma($templatesDir);
     }
 
     private function _stripWhitespace($str)
