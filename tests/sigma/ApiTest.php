@@ -1,4 +1,4 @@
-<?php
+<?php namespace Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -21,11 +21,6 @@
  */
 
 /**
- * PHPUnit Test Case
- */
-require_once 'PHPUnit/Framework/TestCase.php';
-
-/**
  * Test case for class API
  *
  * @category    HTML
@@ -34,7 +29,7 @@ require_once 'PHPUnit/Framework/TestCase.php';
  * @version     @package_version@
  * @ignore
  */
-class Sigma_api_TestCase extends PHPUnit_Framework_TestCase
+class ApiTest extends \PHPUnit_Framework_TestCase
 {
    /**
     * A template object
@@ -44,8 +39,9 @@ class Sigma_api_TestCase extends PHPUnit_Framework_TestCase
 
     function setUp()
     {
-        $className = 'HTML_Template_' . $GLOBALS['_HTML_Template_Sigma_IT_class'];
-        $this->tpl = new $className(dirname(__FILE__) . '/templates');
+        $className = '\\HTML_Template_Sigma';
+        $templatesDir = $GLOBALS['_HTML_Template_Sigma_templates_dir'];
+        $this->tpl = new $className($templatesDir);
     }
 
     function _stripWhitespace($str)
