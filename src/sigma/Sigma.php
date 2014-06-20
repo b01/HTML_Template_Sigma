@@ -35,6 +35,7 @@ define('SIGMA_PLACEHOLDER_DUPLICATE',     -11);
 define('SIGMA_BLOCK_EXISTS',              -12);
 define('SIGMA_INVALID_CALLBACK',          -13);
 define('SIGMA_CALLBACK_SYNTAX_ERROR',     -14);
+define('sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)));
 /**#@-*/
 
 /**
