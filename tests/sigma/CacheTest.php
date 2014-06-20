@@ -1,4 +1,4 @@
-<?php
+<?php namespace test\sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -21,11 +21,6 @@
  */
 
 /**
- * Test case for class API
- */
-require_once dirname(__FILE__) . '/Sigma_api_testcase.php';
-
-/**
  * Test case for cache functionality
  *
  * The class builds upon API tests, checking that methods that should produce
@@ -37,17 +32,19 @@ require_once dirname(__FILE__) . '/Sigma_api_testcase.php';
  * @version     @package_version@
  * @ignore
  */
-class Sigma_cache_TestCase extends Sigma_api_TestCase
+class CacheTest extends ApiTest
 {
+    /** @var  \HTML_Template_Sigma */
+    protected $tpl;
+
     function setUp()
     {
-        $className = 'HTML_Template_' . $GLOBALS['_HTML_Template_Sigma_IT_class'];
-        $this->tpl = new $className(
+        $this->tpl = new \HTML_Template_Sigma(
             $GLOBALS['_HTML_Template_Sigma_templates_dir'], $GLOBALS['_HTML_Template_Sigma_cache_dir']
         );
     }
 
-    function _removeCachedFiles($filename)
+    private function _removeCachedFiles($filename)
     {
         if (!is_array($filename)) {
             $filename = array($filename);

@@ -1,4 +1,4 @@
-<?php namespace Sigma;
+<?php namespace test\sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *

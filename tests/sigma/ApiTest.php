@@ -1,4 +1,4 @@
-<?php namespace Sigma;
+<?php namespace test\sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -31,20 +31,16 @@
  */
 class ApiTest extends \PHPUnit_Framework_TestCase
 {
-   /**
-    * A template object
-    * @var object
-    */
-    var $tpl;
+    /** @var \HTML_Template_Sigma */
+    protected $tpl;
 
     function setUp()
     {
-        $className = '\\HTML_Template_Sigma';
         $templatesDir = $GLOBALS['_HTML_Template_Sigma_templates_dir'];
-        $this->tpl = new $className($templatesDir);
+        $this->tpl = new \HTML_Template_Sigma($templatesDir);
     }
 
-    function _stripWhitespace($str)
+    private function _stripWhitespace($str)
     {
         return preg_replace('/\\s+/', '', $str);
     }
@@ -62,7 +58,7 @@ class ApiTest extends \PHPUnit_Framework_TestCase
     * Tests a setTemplate method
     *
     */
-    function testSetTemplate()
+    public function testSetTemplate()
     {
         $result = $this->tpl->setTemplate('A template', false, false);
         if (is_a($result, 'PEAR_Error')) {
