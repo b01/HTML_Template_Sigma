@@ -1,7 +1,6 @@
 {
 	"name": "sigma/sigma",
 	"description": "A HTML template engine written in PHP. HTML_Template_Sigma implements Integrated Templates API designed by Ulf Wendel.",
-	"minimum-stability": "dev",
 	"license": "PHP-3.01",
 	"keywords": "html template engine",
 	"authors": [

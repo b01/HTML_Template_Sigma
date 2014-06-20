@@ -8,16 +8,3 @@ Pull requests are welcome.
 ```bash
 ./vendor/bin/phpunit -c tests/phpunit.xml
 ```
-
-* To build, simply
-```bash
-$ pear package
-```
-
-* To install from scratch
-```bash
-$ pear install package.xml
-```
-
-* To upgrade
-$ pear upgrade -f package.xml
