@@ -1,4 +1,4 @@
-<?php
+<?php namespace teset\sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -21,11 +21,6 @@
  */
 
 /**
- * PHPUnit Test Case
- */
-require_once 'PHPUnit/Framework/TestCase.php';
-
-/**
  * Test case for common package usage patterns
  *
  * @category    HTML
@@ -34,21 +29,20 @@ require_once 'PHPUnit/Framework/TestCase.php';
  * @version     @package_version@
  * @ignore
  */
-class Sigma_Usage_TestCase extends PHPUnit_Framework_TestCase
+class UsageTest extends \PHPUnit_Framework_TestCase
 {
    /**
     * A template object
     * @var object
     */
-    var $tpl;
+    private $tpl;
 
     function setUp()
     {
-        $className = 'HTML_Template_' . $GLOBALS['_HTML_Template_Sigma_IT_class'];
-        $this->tpl = new $className(dirname(__FILE__) . '/templates');
+        $this->tpl = new \HTML_Template_Sigma($GLOBALS['_HTML_Template_Sigma_templates_dir']);
     }
 
-    function _stripWhitespace($str)
+    private function _stripWhitespace($str)
     {
         return preg_replace('/\\s+/', '', $str);
     }
@@ -61,7 +55,6 @@ class Sigma_Usage_TestCase extends PHPUnit_Framework_TestCase
         $this->assertTrue(false, 'method '. $name . ' not implemented in ' . get_class($this->tpl));
         return false;
     }
-
 
    /**
     * Tests iterations over two blocks
