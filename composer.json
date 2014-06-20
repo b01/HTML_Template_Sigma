@@ -1,10 +1,10 @@
 {
 	"name": "sigma/sigma",
-	"description": "A HTML template engine for PHP. HTML_Template_Sigma implements Integrated Templates API designed by Ulf Wendel.",
-    "minimum-stability": "dev",
-	"license": "PHP License",
-    "type": "library",
-    "authors": [
+	"description": "A HTML template engine written in PHP. HTML_Template_Sigma implements Integrated Templates API designed by Ulf Wendel.",
+	"minimum-stability": "dev",
+	"license": "PHP-3.01",
+	"keywords": "html template engine",
+	"authors": [
 		{
 			"name": "Alexey Borzov",
 			"homepage": "https://github.com/sad-spirit",
@@ -25,16 +25,16 @@
 		"php": ">=5.4.0",
 		"ext-ctype": "*"
 	},
-    "require-dev": {
-        "phpunit/phpunit": "3.7.*"
-    },
-	"autoload": {
-        "psr-0": {
-            "sigma\\": "src/"
-        }
+	"require-dev": {
+		"phpunit/phpunit": "3.7.*"
 	},
-    "support": {
-        "issues": "http://pear.php.net/bugs/search.php?cmd=display&package_name[]=HTML_Template_Sigma",
-        "source": "https://github.com/pear/HTML_Template_Sigma"
-    }
+	"autoload": {
+		"psr-0": {
+		"sigma\\": "src/"
+		}
+	},
+	"support": {
+		"issues": "http://pear.php.net/bugs/search.php?cmd=display&package_name[]=HTML_Template_Sigma",
+		"source": "https://github.com/pear/HTML_Template_Sigma"
+	}
 }
