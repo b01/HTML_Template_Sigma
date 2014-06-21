@@ -17,6 +17,7 @@ Pull requests are welcome.
 
 **To Install, add the following to your composer.json**
 ```json
+{
 	"minimum-stability": "dev",
     "repositories": [
         {
@@ -27,4 +28,5 @@ Pull requests are welcome.
     "require": {
         "sigma/sigma": "dev-migrate-to-composer-scheme"
     }
+}
 ```
