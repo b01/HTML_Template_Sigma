@@ -8,13 +8,23 @@
 * PHPUnit-based tests to define correct behaviour
 * Usage examples for most of the features are available, look in the docs/ directory
 
-This package is http://pear.php.net/package/HTML_Template_Sigma and has been migrated from https://svn.php.net/repository/pear/packages/HTML_Template_Sigma
-
-Please report all issues via the PEAR bug tracker: http://pear.php.net/bugs/search.php?cmd=display&package_name[]=HTML_Template_Sigma
-
 Pull requests are welcome.
 
-* To test, run either
+**To test, run**
 ```bash
 ./vendor/bin/phpunit -c tests/phpunit.xml
+```
+
+**To Install, add the following to your composer.json**
+```json
+	"minimum-stability": "dev",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/b01/HTML_Template_Sigma"
+        }
+    ],
+    "require": {
+        "sigma/sigma": "dev-migrate-to-composer-scheme"
+    }
 ```
