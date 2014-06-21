@@ -1,4 +1,4 @@
-<?php namespace test\sigma;
+<?php namespace Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -34,12 +34,12 @@
  */
 class CacheTest extends ApiTest
 {
-    /** @var  \sigma\Sigma */
+    /** @var  Sigma */
     protected $tpl;
 
     function setUp()
     {
-        $this->tpl = new \sigma\Sigma(
+        $this->tpl = new Sigma(
             $GLOBALS['_HTML_Template_Sigma_templates_dir'], $GLOBALS['_HTML_Template_Sigma_cache_dir']
         );
     }

@@ -1,6 +1,6 @@
-<?php namespace test\sigma;
+<?php namespace Sigma;
 /**
- * Unit tests for HTML_Template_Sigma
+ * Unit tests for Sigma\Sigma
  *
  * PHP versions 4 and 5
  *
@@ -10,34 +10,29 @@
  * the PHP License and are unable to obtain it through the web, please
  * send a note to license@php.net so we can mail you a copy immediately.
  *
- * @category    HTML
- * @package     HTML_Template_Sigma
+ * @package     Sigma
  * @author      Alexey Borzov <avb@php.net>
  * @copyright   2001-2007 The PHP Group
  * @license     http://www.php.net/license/3_01.txt PHP License 3.01
- * @version     CVS: $Id$
- * @link        http://pear.php.net/package/HTML_Template_Sigma
- * @ignore
  */
 
 /**
  * Test case for class API
  *
- * @category    HTML
- * @package     HTML_Template_Sigma
+ * @package     Sigma
  * @author      Alexey Borzov <avb@php.net>
  * @version     @package_version@
  * @ignore
  */
 class ApiTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var \Sigma */
+    /** @var Sigma */
     protected $tpl;
 
     function setUp()
     {
         $templatesDir = $GLOBALS['_HTML_Template_Sigma_templates_dir'];
-        $this->tpl = new \sigma\Sigma($templatesDir);
+        $this->tpl = new Sigma($templatesDir);
     }
 
     private function _stripWhitespace($str)

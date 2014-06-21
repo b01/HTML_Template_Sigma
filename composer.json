@@ -28,8 +28,8 @@
 		"phpunit/phpunit": "3.7.*"
 	},
 	"autoload": {
-		"psr-0": {
-		"Sigma\\": "src/"
+		"psr-4": {
+			"Sigma\\": ["src/", "test/"]
 		}
 	},
 	"support": {
