@@ -1,5 +1,5 @@
 {
-	"name": "sigma/sigma",
+	"name": "kshabazz/sigma",
 	"description": "A HTML template engine written in PHP, which implements Integrated Templates API designed by Ulf Wendel.",
 	"license": "PHP-3.01",
 	"keywords": ["html", "template", "engine"],

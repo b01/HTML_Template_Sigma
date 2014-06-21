@@ -22,11 +22,11 @@ Pull requests are welcome.
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/b01/HTML_Template_Sigma"
+            "url": "https://github.com/b01/sigma"
         }
     ],
     "require": {
-        "sigma/sigma": "dev-migrate-to-composer-scheme"
+        "kshabazz/sigma": "dev-master"
     }
 }
 ```
