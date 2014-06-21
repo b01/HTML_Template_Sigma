@@ -1,4 +1,4 @@
-<?php namespace sigma;
+<?php namespace Sigma;
 /**
  * Implementation of Integrated Templates API with template 'compilation' added.
  *

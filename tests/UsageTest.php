@@ -1,4 +1,4 @@
-<?php namespace teset\sigma;
+<?php namespace Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -31,12 +31,12 @@
  */
 class UsageTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var \sigma\Sigma */
+    /** @var Sigma */
     private $tpl;
 
     function setUp()
     {
-        $this->tpl = new \sigma\Sigma($GLOBALS['_HTML_Template_Sigma_templates_dir']);
+        $this->tpl = new Sigma($GLOBALS['_HTML_Template_Sigma_templates_dir']);
     }
 
     private function _stripWhitespace($str)
