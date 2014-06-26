@@ -1,4 +1,4 @@
-<?php namespace Sigma;
+<?php namespace Kshabazz\Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
