@@ -18,22 +18,32 @@
 			"name": "Martin Jansen",
 			"homepage": "https://github.com/mj",
 			"role": "Developer"
+		},
+		{
+			"name": "Khalifah Shabazz",
+			"homepage": "http://www.kshabazz.net",
+			"role": "Developer"
 		}
 	],
 	"require": {
-		"php": ">=5.4.0",
+		"php": "~5.4",
 		"ext-ctype": "*"
 	},
 	"require-dev": {
-		"phpunit/phpunit": "3.7.*"
+		"phpunit/phpunit": "~4.1"
 	},
 	"autoload": {
 		"psr-4": {
-			"Kshabazz\\Sigma\\": ["src/", "test/"]
+			"Kshabazz\\Sigma\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Kshabazz\\Tests\\Sigma\\": "tests/Sigma"
 		}
 	},
 	"support": {
-		"issues": "http://pear.php.net/bugs/search.php?cmd=display&package_name[]=HTML_Template_Sigma",
-		"source": "https://github.com/pear/HTML_Template_Sigma"
+		"issues": "https://github.com/b01/sigma/issues",
+		"source": "https://github.com/b01/sigma.git"
 	}
 }
