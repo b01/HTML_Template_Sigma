@@ -1,4 +1,4 @@
-<?php namespace Kshabazz\Sigma;
+<?php namespace Kshabazz\Tests\Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -20,6 +20,8 @@
  * @ignore
  */
 
+use Kshabazz\Sigma\Sigma;
+
 /**
  * Test case for cache functionality
  *
@@ -34,7 +36,7 @@
  */
 class CacheTest extends ApiTest
 {
-    /** @var  Sigma */
+    /** @var  \Kshabazz\Sigma\Sigma */
     protected $tpl;
 
     function setUp()

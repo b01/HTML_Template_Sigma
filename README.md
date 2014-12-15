@@ -12,7 +12,7 @@ Pull requests are welcome.
 
 **To test, run**
 ```bash
-./vendor/bin/phpunit -c tests/phpunit.xml
+./vendor/bin/phpunit -c phpunit.xml
 ```
 
 **To Install, add the following to your composer.json**

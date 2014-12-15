@@ -1,4 +1,4 @@
-<?php namespace Kshabazz\Sigma;
+<?php namespace Kshabazz\Tests\Sigma;
 /**
  * Unit tests for HTML_Template_Sigma
  *
@@ -20,6 +20,8 @@
  * @ignore
  */
 
+use Kshabazz\Sigma\Sigma;
+
 /**
  * Test case for fixed bugs
  *
@@ -31,7 +33,7 @@
  */
 class BugTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var Sigma */
+    /** @var \Kshabazz\Sigma\Sigma */
     private $tpl;
     /** @var  string */
     private $templatePath;
