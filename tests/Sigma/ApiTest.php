@@ -1,4 +1,4 @@
-<?php namespace Kshabazz\Sigma;
+<?php namespace Kshabazz\Tests\Sigma;
 /**
  * Unit tests for Sigma\Sigma
  *
@@ -15,6 +15,7 @@
  * @copyright   2001-2007 The PHP Group
  * @license     http://www.php.net/license/3_01.txt PHP License 3.01
  */
+use Kshabazz\Sigma\Sigma;
 
 /**
  * Test case for class API
@@ -26,7 +27,7 @@
  */
 class ApiTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var Sigma */
+    /** @var \Kshabazz\Sigma\Sigma */
     protected $tpl;
 
     function setUp()
