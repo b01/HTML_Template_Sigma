@@ -1,0 +1,22 @@
+<?php
+/**#@+
+ * Error codes
+ * @see HTML_Template_Sigma::errorMessage()
+ */
+const
+	SIGMA_OK = 1,
+	SIGMA_ERROR = -1,
+	SIGMA_TPL_NOT_FOUND = -2,
+	SIGMA_BLOCK_NOT_FOUND = -3,
+	SIGMA_BLOCK_DUPLICATE = -4,
+	SIGMA_CACHE_ERROR = -5,
+	SIGMA_UNKNOWN_OPTION = -6,
+	SIGMA_PLACEHOLDER_NOT_FOUND = -10,
+	SIGMA_PLACEHOLDER_DUPLICATE = -11,
+	SIGMA_BLOCK_EXISTS = -12,
+	SIGMA_INVALID_CALLBACK = -13,
+	SIGMA_CALLBACK_SYNTAX_ERROR = -14;
+/**#@-*/
+
+define( 'Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) );
+?>
