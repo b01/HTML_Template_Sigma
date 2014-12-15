@@ -4,7 +4,8 @@
  * @see HTML_Template_Sigma::errorMessage()
  */
 const
-	SIGMA_BAD_ROOT_ERROR = -15;
+	SIGMA_BAD_ROOT_ERROR = -15,
+	SIGMA_BAD_CACHE_ROOT_ERROR = -16;
 /**#@-*/
 
 define('SIGMA_OK',                         1);

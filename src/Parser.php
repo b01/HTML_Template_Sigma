@@ -273,14 +273,18 @@ class Parser
 				SIGMA_BLOCK_EXISTS          => 'Block \'%s\' already exists',
 				SIGMA_INVALID_CALLBACK      => 'Callback does not exist',
 				SIGMA_CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
-				SIGMA_BAD_ROOT_ERROR        => 'Cannot set root to a directory that does not exists.'
+				SIGMA_BAD_ROOT_ERROR        => 'Cannot set root to a directory that does not exists.',
+				SIGMA_BAD_CACHE_ROOT_ERROR  => 'Cannot set cache root to a directory that does not exists.'
 			);
 		}
 
-		if (!isset($errorMessages[$code])) {
+		if ( !\array_key_exists($code, $errorMessages) )
+		{
 			return $errorMessages[SIGMA_ERROR];
-		} else {
-			return (null === $data)? $errorMessages[$code]: sprintf($errorMessages[$code], $data);
+		}
+		else
+		{
+			return ( null === $data )? $errorMessages[ $code ]: \sprintf( $errorMessages[$code], $data );
 		}
 	}
 
@@ -297,19 +301,22 @@ class Parser
 	 * The files in this cache do not have any TTL and are regenerated when the
 	 * source templates change.
 	 *
-	 * @param string $root directory name
-	 *
+	 * @param string $pRoot directory name
 	 * @see Parser(), _getCached(), _writeCache()
-	 * @return void
+	 * @return \Kshabazz\Sigma\Parser
+	 * @throws \Kshabazz\Sigma\SigmaException
 	 */
-	public function setCacheRoot($root)
+	public function setCacheRoot( $pRoot )
 	{
-		if (empty($root)) {
-			$root = null;
-		} elseif (DIRECTORY_SEPARATOR != substr($root, -1)) {
-			$root .= DIRECTORY_SEPARATOR;
+		if (is_dir($pRoot)) {
+			$this->_cacheRoot = $pRoot;
+			return $this;
 		}
-		$this->_cacheRoot = $root;
+
+		throw new SigmaException(
+			$this->errorMessage(SIGMA_BAD_CACHE_ROOT_ERROR),
+			SIGMA_BAD_CACHE_ROOT_ERROR
+		);
 	}
 
 	/**
@@ -382,6 +389,7 @@ class Parser
 		if ( \is_dir($pRoot) )
 		{
 			$this->fileRoot = $pRoot;
+			return $this;
 		}
 
 		throw new SigmaException(
