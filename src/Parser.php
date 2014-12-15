@@ -111,19 +111,6 @@ class Parser
 	var $commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
 
 	/**
-	 * Global variables for substitution
-	 *
-	 * These are substituted into all blocks, are not cleared on
-	 * block parsing and do not trigger "non-empty" logic. I.e. if
-	 * only global variables are substituted into the block, it is
-	 * still considered "empty".
-	 *
-	 * @var      array
-	 * @see      setVariable(), setGlobalVariable()
-	 */
-	private $_globalVariables = array();
-
-	/**
 	 * Root directory for "source" templates
 	 * @var    string
 	 * @see    HTML_Template_Sigma(), setRoot()
@@ -150,14 +137,6 @@ class Parser
 		'trim_on_save'  => true,
 		'charset'       => 'iso-8859-1'
 	);
-
-	/**
-	 * Template blocks and their content
-	 * @var      array
-	 * @see      _buildBlocks()
-	 * @access   private
-	 */
-	private $_blocks = array();
 
 	/**
 	 * Content of parsed blocks
@@ -193,17 +172,6 @@ class Parser
 	 * @see      hideBlock(), $removeEmptyBlocks
 	 */
 	private $_hiddenBlocks = array();
-
-	/**
-	 * Variables for substitution.
-	 *
-	 * Variables are kept in this array before the replacements are done.
-	 * This allows automatic removal of empty blocks.
-	 *
-	 * @var      array
-	 * @see      setVariable()
-	 */
-	private $_variables = array();
 
 	/** @var array List of functions found in the template. */
 	private $_functions = array();
@@ -249,43 +217,14 @@ class Parser
 	}
 
 	/**
-	 * Returns a textual error message for an error code
+	 * Parses the current block
 	 *
-	 * @param integer $code error code or another error object for code reuse
-	 * @param string $data additional data to insert into message
-	 * @return string error message
+	 * @see    parse(), setCurrentBlock()
+	 * @return bool whether the block was "empty"
 	 */
-	public function errorMessage($code, $data = null)
+	public function parseCurrentBlock()
 	{
-		static $errorMessages;
-		if (!isset($errorMessages)) {
-			$errorMessages = array(
-				SIGMA_ERROR                 => 'unknown error',
-				SIGMA_OK                    => '',
-				SIGMA_TPL_NOT_FOUND         => 'Cannot read the template file \'%s\'',
-				SIGMA_BLOCK_NOT_FOUND       => 'Cannot find block \'%s\'',
-				SIGMA_BLOCK_DUPLICATE       => 'The name of a block must be unique within a template. '
-					. 'Block \'%s\' found twice.',
-				SIGMA_CACHE_ERROR           => 'Cannot save template file \'%s\'',
-				SIGMA_UNKNOWN_OPTION        => 'Unknown option \'%s\'',
-				SIGMA_PLACEHOLDER_NOT_FOUND => 'Variable placeholder \'%s\' not found',
-				SIGMA_PLACEHOLDER_DUPLICATE => 'Placeholder \'%s\' should be unique, found in multiple blocks',
-				SIGMA_BLOCK_EXISTS          => 'Block \'%s\' already exists',
-				SIGMA_INVALID_CALLBACK      => 'Callback does not exist',
-				SIGMA_CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
-				SIGMA_BAD_ROOT_ERROR        => 'Cannot set root to a directory that does not exists.',
-				SIGMA_BAD_CACHE_ROOT_ERROR  => 'Cannot set cache root to a directory that does not exists.'
-			);
-		}
-
-		if ( !\array_key_exists($code, $errorMessages) )
-		{
-			return $errorMessages[SIGMA_ERROR];
-		}
-		else
-		{
-			return ( null === $data )? $errorMessages[ $code ]: \sprintf( $errorMessages[$code], $data );
-		}
+		return $this->parse($this->currentBlock);
 	}
 
 	/**
@@ -314,7 +253,7 @@ class Parser
 		}
 
 		throw new SigmaException(
-			$this->errorMessage(SIGMA_BAD_CACHE_ROOT_ERROR),
+			SigmaException::errorMessage(SIGMA_BAD_CACHE_ROOT_ERROR),
 			SIGMA_BAD_CACHE_ROOT_ERROR
 		);
 	}
@@ -393,9 +332,554 @@ class Parser
 		}
 
 		throw new SigmaException(
-			$this->errorMessage(SIGMA_BAD_ROOT_ERROR),
+			SigmaException::errorMessage(SIGMA_BAD_ROOT_ERROR),
 			SIGMA_BAD_ROOT_ERROR
 		);
+	}
+
+
+
+
+	/**
+	 * Sets the option for the template class
+	 *
+	 * Currently available options:
+	 * - preserve_data: If false (default), then substitute variables and
+	 *   remove empty placeholders in data passed through setVariable (see also
+	 *   PHP bugs #20199, #21951)
+	 * - trim_on_save: Whether to trim extra whitespace from template on cache
+	 *   save (defaults to true). Generally safe to leave this on, unless you
+	 *   have <<pre>><</pre>> in templates or want to preserve HTML indentantion
+	 * - charset: is used by builtin template callback 'h'/'e'. Defaults to 'iso-8859-1'
+	 *
+	 * @param string $option option name
+	 * @param mixed  $value  option value
+	 *
+	 * @access public
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 */
+	function setOption($option, $value)
+	{
+		if (isset($this->_options[$option])) {
+			$this->_options[$option] = $value;
+			return SIGMA_OK;
+		}
+		return new \Exception($this->errorMessage(SIGMA_UNKNOWN_OPTION, $option), SIGMA_UNKNOWN_OPTION);
+	}
+
+	/**
+	 * Prints a block with all replacements done.
+	 *
+	 * @param string $block block name
+	 *
+	 * @access  public
+	 * @return  void
+	 * @see     get()
+	 */
+	function show($block = '__global__')
+	{
+		print $this->get($block);
+	}
+
+
+	/**
+	 * Returns a block with all replacements done.
+	 *
+	 * @param string $block block name
+	 * @param bool   $clear whether to clear parsed block contents
+	 *
+	 * @return string block with all replacements done
+	 * @throws PEAR_Error
+	 * @access public
+	 * @see    show()
+	 */
+	function get($block = '__global__', $clear = false)
+	{
+		if (!isset($this->_blocks[$block])) {
+			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+		}
+		if ('__global__' == $block && !$this->flagGlobalParsed) {
+			$this->parse('__global__');
+		}
+		// return the parsed block, removing the unknown placeholders if needed
+		if (!isset($this->_parsedBlocks[$block])) {
+			return '';
+
+		} else {
+			$ret = $this->_parsedBlocks[$block];
+			if ($clear) {
+				unset($this->_parsedBlocks[$block]);
+			}
+			if ($this->removeUnknownVariables) {
+				$ret = preg_replace($this->removeVariablesRegExp, '', $ret);
+			}
+			if ($this->_options['preserve_data']) {
+				$ret = str_replace(
+					$this->openingDelimiter . '%preserved%' . $this->closingDelimiter, $this->openingDelimiter, $ret
+				);
+			}
+			return $ret;
+		}
+	}
+
+
+	/**
+	 * Parses the given block.
+	 *
+	 * @param string $block         block name
+	 * @param bool   $flagRecursion true if the function is called recursively (do not set this to true yourself!)
+	 * @param bool   $fakeParse     true if parsing a "hidden" block (do not set this to true yourself!)
+	 *
+	 * @return bool whether the block was "empty"
+	 * @access public
+	 * @see    parseCurrentBlock()
+	 * @throws PEAR_Error
+	 */
+	function parse($block = '__global__', $flagRecursion = false, $fakeParse = false)
+	{
+		static $vars;
+
+		if (!isset($this->_blocks[$block])) {
+			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+		}
+		if ('__global__' == $block) {
+			$this->flagGlobalParsed = true;
+		}
+		if (!isset($this->_parsedBlocks[$block])) {
+			$this->_parsedBlocks[$block] = '';
+		}
+		$outer = $this->_blocks[$block];
+
+		if (!$flagRecursion) {
+			$vars = array();
+		}
+		// block is not empty if its local var is substituted
+		$empty = true;
+		foreach ($this->_blockVariables[$block] as $allowedvar => $v) {
+			if (isset($this->_variables[$allowedvar])) {
+				$vars[$this->openingDelimiter . $allowedvar . $this->closingDelimiter] = $this->_variables[$allowedvar];
+				$empty = false;
+				// vital for checking "empty/nonempty" status
+				unset($this->_variables[$allowedvar]);
+			}
+		}
+
+		// processing of the inner blocks
+		if (isset($this->_children[$block])) {
+			foreach ($this->_children[$block] as $innerblock => $v) {
+				$placeholder = $this->openingDelimiter.'__'.$innerblock.'__'.$this->closingDelimiter;
+
+				if (isset($this->_hiddenBlocks[$innerblock])) {
+					// don't bother actually parsing this inner block; but we _have_
+					// to go through its local vars to prevent problems on next iteration
+					$this->parse($innerblock, true, true);
+					unset($this->_hiddenBlocks[$innerblock]);
+					$outer = str_replace($placeholder, '', $outer);
+
+				} else {
+					$this->parse($innerblock, true, $fakeParse);
+					// block is not empty if its inner block is not empty
+					if ('' != $this->_parsedBlocks[$innerblock]) {
+						$empty = false;
+					}
+
+					$outer = str_replace($placeholder, $this->_parsedBlocks[$innerblock], $outer);
+					$this->_parsedBlocks[$innerblock] = '';
+				}
+			}
+		}
+
+		// add "global" variables to the static array
+		foreach ($this->_globalVariables as $allowedvar => $value) {
+			if (isset($this->_blockVariables[$block][$allowedvar])) {
+				$vars[$this->openingDelimiter . $allowedvar . $this->closingDelimiter] = $value;
+			}
+		}
+		// if we are inside a hidden block, don't bother
+		if (!$fakeParse) {
+			if (0 != count($vars) && (!$flagRecursion || !empty($this->_functions[$block]))) {
+				$varKeys     = array_keys($vars);
+				$varValues   = $this->_options['preserve_data']
+					? array_map(array(&$this, '_preserveOpeningDelimiter'), array_values($vars))
+					: array_values($vars);
+			}
+
+			// check whether the block is considered "empty" and append parsed content if not
+			if (!$empty || '__global__' == $block
+				|| !$this->removeEmptyBlocks || isset($this->_touchedBlocks[$block])
+			) {
+				// perform callbacks
+				if (!empty($this->_functions[$block])) {
+					foreach ($this->_functions[$block] as $id => $data) {
+						$placeholder = $this->openingDelimiter . '__function_' . $id . '__' . $this->closingDelimiter;
+						// do not waste time calling function more than once
+						if (!isset($vars[$placeholder])) {
+							$args         = array();
+							$preserveArgs = !empty($this->_callback[$data['name']]['preserveArgs']);
+							foreach ($data['args'] as $arg) {
+								$args[] = (empty($varKeys) || $preserveArgs)
+									? $arg
+									: str_replace($varKeys, $varValues, $arg);
+							}
+							if (isset($this->_callback[$data['name']]['data'])) {
+								$res = call_user_func_array($this->_callback[$data['name']]['data'], $args);
+							} else {
+								$res = isset($args[0])? $args[0]: '';
+							}
+							$outer = str_replace($placeholder, $res, $outer);
+							// save the result to variable cache, it can be requested somewhere else
+							$vars[$placeholder] = $res;
+						}
+					}
+				}
+				// substitute variables only on non-recursive call, thus all
+				// variables from all inner blocks get substituted
+				if (!$flagRecursion && !empty($varKeys)) {
+					$outer = str_replace($varKeys, $varValues, $outer);
+				}
+
+				$this->_parsedBlocks[$block] .= $outer;
+				if (isset($this->_touchedBlocks[$block])) {
+					unset($this->_touchedBlocks[$block]);
+				}
+			}
+		}
+		return $empty;
+	}
+
+	/**
+	 * Sets the template.
+	 *
+	 * You can either load a template file from disk with LoadTemplatefile() or set the
+	 * template manually using this function.
+	 *
+	 * @param string  $template               template content
+	 * @param boolean $removeUnknownVariables remove unknown/unused variables?
+	 * @param boolean $removeEmptyBlocks      remove empty blocks?
+	 *
+	 * @access public
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @see    loadTemplatefile()
+	 */
+	function setTemplate($template, $removeUnknownVariables = true, $removeEmptyBlocks = true)
+	{
+		$this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
+		$list = $this->_buildBlocks(
+			'<!-- BEGIN __global__ -->' .
+			preg_replace($this->commentRegExp, '', $template) .
+			'<!-- END __global__ -->'
+		);
+		if (is_a($list, 'PEAR_Error')) {
+			return $list;
+		}
+		return $this->_buildBlockVariables();
+	}
+
+	/**
+	 * Quotes the string so that it can be used in Javascript string constants
+	 *
+	 * @param string $value String to be used in JS
+	 *
+	 * @access private
+	 * @return string
+	 */
+	function _jsEscape($value)
+	{
+		return strtr(
+			$value,
+			array(
+				"\r" => '\r',    "'"  => "\\x27", "\n" => '\n',
+				'"'  => '\\x22', "\t" => '\t',    '\\' => '\\\\'
+			)
+		);
+	}
+
+	/**
+	 * Wrapper around htmlentities() needed to use the charset option
+	 *
+	 * @param string $value String with special characters
+	 *
+	 * @access private
+	 * @return string
+	 */
+	function _htmlentities($value)
+	{
+		return htmlentities($value, ENT_COMPAT, $this->_options['charset']);
+	}
+
+	/**
+	 * Wrapper around htmlspecialchars() needed to use the charset option
+	 *
+	 * @param string $value String with special characters
+	 *
+	 * @access private
+	 * @return string
+	 */
+	function _htmlspecialchars($value)
+	{
+		return htmlspecialchars($value, ENT_COMPAT, $this->_options['charset']);
+	}
+
+	/**
+	 * Loads a template file.
+	 *
+	 * If caching is on, then it checks whether a "prepared" template exists.
+	 * If it does, it gets loaded instead of the original, if it does not, then
+	 * the original gets loaded and prepared and then the prepared version is saved.
+	 * addBlockfile() and replaceBlockfile() implement quite the same logic.
+	 *
+	 * @param string  $filename               filename
+	 * @param boolean $removeUnknownVariables remove unknown/unused variables?
+	 * @param boolean $removeEmptyBlocks      remove empty blocks?
+	 *
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @see    setTemplate(), $removeUnknownVariables, $removeEmptyBlocks
+	 */
+	public function loadTemplateFile($filename, $removeUnknownVariables = true, $removeEmptyBlocks = true)
+	{
+		if ($this->_isCached($filename)) {
+			$this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
+			return $this->_getCached($filename);
+		}
+		if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
+			return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
+		}
+		$this->_triggers     = array();
+		$this->_triggerBlock = '__global__';
+		$template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
+		if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks))) {
+			return $res;
+		} else {
+			return $this->_writeCache($filename, '__global__');
+		}
+	}
+
+
+	/**
+	 * Recursively builds a list of all variables within a block.
+	 *
+	 * Also calls _buildFunctionlist() for each block it visits
+	 *
+	 * @param string $block block name
+	 *
+	 * @access private
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @see    _buildFunctionlist()
+	 */
+	function _buildBlockVariables($block = '__global__')
+	{
+		$this->_blockVariables[$block] = array();
+		$this->_functions[$block]      = array();
+		preg_match_all($this->variablesRegExp, $this->_blocks[$block], $regs, PREG_SET_ORDER);
+		foreach ($regs as $match) {
+			$this->_blockVariables[$block][$match[1]] = true;
+			if (!empty($match[3])) {
+				$funcData = array(
+					'name' => $match[3],
+					'args' => array($this->openingDelimiter . $match[1] . $this->closingDelimiter)
+				);
+				$funcId   = substr(md5(serialize($funcData)), 0, 10);
+
+				// update block info
+				$this->_blocks[$block] = str_replace(
+					$match[0],
+					$this->openingDelimiter . '__function_' . $funcId . '__' . $this->closingDelimiter,
+					$this->_blocks[$block]
+				);
+				$this->_blockVariables[$block]['__function_' . $funcId . '__'] = true;
+				$this->_functions[$block][$funcId] = $funcData;
+			}
+		}
+		if (SIGMA_OK != ($res = $this->_buildFunctionlist($block))) {
+			return $res;
+		}
+		if (isset($this->_children[$block]) && is_array($this->_children[$block])) {
+			foreach ($this->_children[$block] as $child => $v) {
+				if (SIGMA_OK != ($res = $this->_buildBlockVariables($child))) {
+					return $res;
+				}
+			}
+		}
+		return SIGMA_OK;
+	}
+
+	/**
+	 * Builds a list of functions in a block.
+	 *
+	 * @param string $block Block name
+	 *
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @see    _buildBlockVariables()
+	 */
+	private function _buildFunctionlist($block)
+	{
+		$template = $this->_blocks[$block];
+		$this->_blocks[$block] = '';
+
+		while (preg_match($this->functionRegExp, $template, $regs)) {
+			$this->_blocks[$block] .= substr($template, 0, strpos($template, $regs[0]));
+			$template = substr($template, strpos($template, $regs[0]) + strlen($regs[0]));
+
+			$state    = 1;
+			$arg      = '';
+			$quote    = '';
+			$funcData = array(
+				'name' => $regs[1],
+				'args' => array()
+			);
+			for ($i = 0, $len = strlen($template); $i < $len; $i++) {
+				$char = $template[$i];
+				switch ($state) {
+					case 0:
+					case -1:
+						break 2;
+
+					case 1:
+						if (')' == $char) {
+							$state = 0;
+						} elseif (',' == $char) {
+							$error = 'Unexpected \',\'';
+							$state = -1;
+						} elseif ('\'' == $char || '"' == $char) {
+							$quote = $char;
+							$state = 5;
+						} elseif (!ctype_space($char)) {
+							$arg  .= $char;
+							$state = 3;
+						}
+						break;
+
+					case 2:
+						$arg = '';
+						if (',' == $char || ')' == $char) {
+							$error = 'Unexpected \'' . $char . '\'';
+							$state = -1;
+						} elseif ('\'' == $char || '"' == $char) {
+							$quote = $char;
+							$state = 5;
+						} elseif (!ctype_space($char)) {
+							$arg  .= $char;
+							$state = 3;
+						}
+						break;
+
+					case 3:
+						if (')' == $char) {
+							$funcData['args'][] = rtrim($arg);
+							$state  = 0;
+						} elseif (',' == $char) {
+							$funcData['args'][] = rtrim($arg);
+							$state = 2;
+						} elseif ('\'' == $char || '"' == $char) {
+							$quote = $char;
+							$arg  .= $char;
+							$state = 4;
+						} else {
+							$arg  .= $char;
+						}
+						break;
+
+					case 4:
+						$arg .= $char;
+						if ($quote == $char) {
+							$state = 3;
+						}
+						break;
+
+					case 5:
+						if ('\\' == $char) {
+							$state = 6;
+						} elseif ($quote == $char) {
+							$state = 7;
+						} else {
+							$arg .= $char;
+						}
+						break;
+
+					case 6:
+						$arg  .= $char;
+						$state = 5;
+						break;
+
+					case 7:
+						if (')' == $char) {
+							$funcData['args'][] = $arg;
+							$state  = 0;
+						} elseif (',' == $char) {
+							$funcData['args'][] = $arg;
+							$state  = 2;
+						} elseif (!ctype_space($char)) {
+							$error = 'Unexpected \'' . $char . '\' (expected: \')\' or \',\')';
+							$state = -1;
+						}
+						break;
+				} // switch
+			} // for
+			if (0 != $state) {
+				return new \Exception(
+					$this->errorMessage(
+						SIGMA_CALLBACK_SYNTAX_ERROR,
+						(empty($error) ? 'Unexpected end of input' : $error)
+						. ' in ' . $regs[0] . substr($template, 0, $i)
+					),
+					SIGMA_CALLBACK_SYNTAX_ERROR
+				);
+
+			} else {
+				$funcId   = 'f' . substr(md5(serialize($funcData)), 0, 10);
+				$template = substr($template, $i);
+
+				$this->_blocks[$block] .= $this->openingDelimiter . '__function_' . $funcId
+					. '__' . $this->closingDelimiter;
+				$this->_blockVariables[$block]['__function_' . $funcId . '__'] = true;
+				$this->_functions[$block][$funcId] = $funcData;
+			}
+		} // while
+		$this->_blocks[$block] .= $template;
+		return SIGMA_OK;
+	}
+
+	/**
+	 * Replaces an opening delimiter by a special string.
+	 *
+	 * Used to implement $_options['preserve_data'] logic
+	 *
+	 * @param string $str String possibly containing opening delimiters
+	 *
+	 * @access private
+	 * @return string
+	 */
+	function _preserveOpeningDelimiter($str)
+	{
+		return (false === strpos($str, $this->openingDelimiter))
+			? $str
+			: str_replace(
+				$this->openingDelimiter,
+				$this->openingDelimiter . '%preserved%' . $this->closingDelimiter, $str
+			);
+	}
+
+	/**
+	 * Resets the object's properties, used before processing a new template
+	 *
+	 * @param boolean $removeUnknownVariables remove unknown/unused variables?
+	 * @param boolean $removeEmptyBlocks      remove empty blocks?
+	 *
+	 * @return void
+	 * @see    setTemplate(), loadTemplateFile()
+	 */
+	private function _resetTemplate($removeUnknownVariables = true, $removeEmptyBlocks = true)
+	{
+		$this->removeUnknownVariables = $removeUnknownVariables;
+		$this->removeEmptyBlocks      = $removeEmptyBlocks;
+		$this->currentBlock           = '__global__';
+		$this->_variables             = array();
+		$this->_blocks                = array();
+		$this->_children              = array();
+		$this->_parsedBlocks          = array();
+		$this->_touchedBlocks         = array();
+		$this->_functions             = array();
+		$this->flagGlobalParsed       = false;
 	}
 }
 ?>
