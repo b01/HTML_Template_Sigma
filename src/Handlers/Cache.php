@@ -127,7 +127,7 @@ class Cache
 	function _writeCache($filename, $block)
 	{
 		// do not save anything if no cache dir, but do pull triggers
-		if (null !== $this->_cacheRoot) {
+		if (null !== $this->_cacheRoot && !empty($filename)) {
 			$cache = array(
 				'blocks'    => array(),
 				'variables' => array(),

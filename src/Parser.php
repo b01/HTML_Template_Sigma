@@ -556,13 +556,16 @@ class Parser
 	 * @param string  $template               template content
 	 * @param boolean $removeUnknownVariables remove unknown/unused variables?
 	 * @param boolean $removeEmptyBlocks      remove empty blocks?
+	 * @param boolean $cacheFilename          name of writeCache file
 	 *
 	 * @access public
 	 * @return mixed SIGMA_OK on success, error object on failure
 	 * @see    loadTemplatefile()
 	 */
-	function setTemplate($template, $removeUnknownVariables = true, $removeEmptyBlocks = true)
+	function setTemplate($template, $removeUnknownVariables = true, $removeEmptyBlocks = true, $cacheFilename = null)
 	{
+		$template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
+
 		$this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
 		$list = $this->_buildBlocks(
 			'<!-- BEGIN __global__ -->' .
@@ -572,7 +575,10 @@ class Parser
 		if (is_a($list, 'PEAR_Error')) {
 			return $list;
 		}
-		return $this->_buildBlockVariables();
+		if (SIGMA_OK !== ($res = $this->_buildBlockVariables())) {
+			return $res;
+		}
+		return $this->_writeCache($cacheFilename, '__global__');
 	}
 
 	/**
@@ -646,11 +652,8 @@ class Parser
 		}
 		$this->_triggers     = array();
 		$this->_triggerBlock = '__global__';
-		$template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
-		if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks))) {
+		if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks, $filename))) {
 			return $res;
-		} else {
-			return $this->_writeCache($filename, '__global__');
 		}
 	}
 
