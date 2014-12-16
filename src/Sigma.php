@@ -881,7 +881,9 @@ class Sigma
      */
     function setTemplate($template, $removeUnknownVariables = true, $removeEmptyBlocks = true)
     {
-        $this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
+	    $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
+
+	    $this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
         $list = $this->_buildBlocks(
             '<!-- BEGIN __global__ -->' .
             preg_replace($this->commentRegExp, '', $template) .
@@ -921,7 +923,6 @@ class Sigma
         }
         $this->_triggers     = array();
         $this->_triggerBlock = '__global__';
-        $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
         if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks))) {
             return $res;
         } else {
