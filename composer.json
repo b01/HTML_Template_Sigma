@@ -35,8 +35,7 @@
 	"autoload": {
 		"psr-4": {
 			"Kshabazz\\Sigma\\": "src/"
-		},
-		"files": ["src/constants.php"]
+		}
 	},
 	"autoload-dev": {
 		"psr-4": {

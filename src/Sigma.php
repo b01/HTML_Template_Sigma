@@ -1,5 +1,55 @@
 <?php namespace Kshabazz\Sigma;
 
+/**#@+
+ * Error codes
+ * @see HTML_Template_Sigma::errorMessage()
+ */
+const
+	SIGMA_BAD_ROOT_ERROR = -15,
+	SIGMA_BAD_CACHE_ROOT_ERROR = -16;
+/**#@-*/
+
+const
+	SIGMA_OK = 1,
+	SIGMA_ERROR = -1,
+	SIGMA_TPL_NOT_FOUND = -2,
+	SIGMA_BLOCK_NOT_FOUND = -3,
+	SIGMA_BLOCK_DUPLICATE = -4,
+	SIGMA_CACHE_ERROR = -5,
+	SIGMA_UNKNOWN_OPTION = -6,
+	SIGMA_PLACEHOLDER_NOT_FOUND = -10,
+	SIGMA_PLACEHOLDER_DUPLICATE = -11,
+	SIGMA_BLOCK_EXISTS = -12,
+	SIGMA_INVALID_CALLBACK = -13,
+	SIGMA_CALLBACK_SYNTAX_ERROR = -14;
+define( 'Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) );
+
+// This is what the above will change to, keeping both until
+// the class breakup is done.
+const
+	OK = 1,
+	ERROR = -1,
+	TPL_NOT_FOUND = -2,
+	BLOCK_NOT_FOUND = -3,
+	BLOCK_DUPLICATE = -4,
+	CACHE_ERROR = -5,
+	UNKNOWN_OPTION = -6,
+	PLACEHOLDER_NOT_FOUND = -10,
+	PLACEHOLDER_DUPLICATE = -11,
+	BLOCK_EXISTS = -12,
+	INVALID_CALLBACK = -13,
+	CALLBACK_SYNTAX_ERROR = -14;
+// Phase this out, we should be able to detect the features we need.
+define('Sigma\\OS_WINDOWS', \strtoupper(\substr(PHP_OS, 0, 3)) );
+
+/**#@+
+ * Error codes
+ * @see HTML_Template_Sigma::errorMessage()
+ */
+const
+BAD_ROOT_ERROR = -15,
+BAD_CACHE_ROOT_ERROR = -16;
+
 /**
  * Class Sigma
  *
