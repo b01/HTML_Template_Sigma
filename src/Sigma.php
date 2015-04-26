@@ -344,6 +344,7 @@ class Sigma
      */
     function setRoot($root)
     {
+	    // Add a trailing slash, when not empty and it's missing.
         if (('' != $root) && (DIRECTORY_SEPARATOR != substr($root, -1))) {
             $root .= DIRECTORY_SEPARATOR;
         }
@@ -374,6 +375,7 @@ class Sigma
     {
         if (empty($root)) {
             $root = null;
+	        // Add a trailing slash when missing.
         } elseif (DIRECTORY_SEPARATOR != substr($root, -1)) {
             $root .= DIRECTORY_SEPARATOR;
         }
