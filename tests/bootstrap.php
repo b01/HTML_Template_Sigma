@@ -6,6 +6,7 @@ require_once __DIR__
 	. DIRECTORY_SEPARATOR . 'autoload.php';
 
 \define( 'FIXTURES_PATH', __DIR__ . DIRECTORY_SEPARATOR . 'fixtures' );
+\define( 'Kshabazz\Sigma\Tests\FIXTURES_PATH', FIXTURES_PATH );
 
 $_HTML_Template_Sigma_cache_dir = __DIR__ . DIRECTORY_SEPARATOR . 'cache';
 $_HTML_Template_Sigma_templates_dir = __DIR__ . DIRECTORY_SEPARATOR . 'templates';

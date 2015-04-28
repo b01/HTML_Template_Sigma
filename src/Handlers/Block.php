@@ -4,7 +4,9 @@ use Kshabazz\Sigma\SigmaException;
 
 use const
 	\Kshabazz\Sigma\SIGMA_OK,
-	\Kshabazz\Sigma\SIGMA_BLOCK_EXISTS;
+	\Kshabazz\Sigma\SIGMA_BLOCK_EXISTS,
+	\Kshabazz\Sigma\BLOCK_DUPLICATE,
+	\Kshabazz\Sigma\BLOCK_NOT_FOUND;
 
 /**
  * Class Block
@@ -14,18 +16,69 @@ use const
 class Block
 {
 	/**
-	 * Template blocks and their content
+	 * Template blocks and their content.
+	 *
 	 * @var array
 	 * @see _buildBlocks()
 	 */
 	private $_blocks = array();
 
 	/**
-	 * @param $string
+	 * RegExp for matching the block names in the template.
+	 * Per default "sm" is used as the regexp modifier, "i" is missing.
+	 * That means a case sensitive search is done.
+	 * @var      string
+	 * @see      $variablenameRegExp, $openingDelimiter, $closingDelimiter
 	 */
-	public function __construct($string)
+	private $blocknameRegExp;
+
+	/**
+	 * RegExp used to find blocks and their content.
+	 *
+	 * @var string
+	 * @see HTML_Template_Sigma()
+	 */
+	private $blockRegExp;
+
+	/**
+	 * RegExp used to find (and remove) comments in the template
+	 * @var string
+	 */
+	private $commentRegExp;
+
+	/**
+	 * First character of a variable placeholder ( _{_VARIABLE} ).
+	 *
+	 * @var string
+	 * @see $closingDelimiter, $blocknameRegExp, $variablenameRegExp
+	 */
+	public $openingDelimiter;
+
+	/**
+	 * Last character of a variable placeholder ( {VARIABLE_}_ )
+	 *
+	 * @var string
+	 * @see $openingDelimiter, $blocknameRegExp, $variablenameRegExp
+	 */
+	public $closingDelimiter ;
+
+	/**
+	 * @param string $template\
+	 */
+	public function __construct( $template, $openingDelimiter, $closingDelimiter )
 	{
-		$this->_buildBlocks($string);
+		$this->openingDelimiter = $openingDelimiter;
+		$this->closingDelimiter = $closingDelimiter;
+		$this->blocknameRegExp  = '[0-9A-Za-z_-]+';
+		$this->blockRegExp = '@<!--\s+BEGIN\s+('
+			. $this->blocknameRegExp
+			. ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
+		$this->commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
+		$this->_buildBlocks(
+			'<!-- BEGIN __global__ -->'
+			. \preg_replace( $this->commentRegExp, '', $template )
+			. '<!-- END __global__ -->'
+		);
 	}
 
 	/**
@@ -124,16 +177,21 @@ class Block
 	 *
 	 * @access public
 	 * @return array a list of child blocks
-	 * @throws PEAR_Error
+	 * @throws \Kshabazz\Sigma\SigmaException
 	 */
-	function getBlockList($parent = '__global__', $recursive = false)
+	public function getBlockList($parent = '__global__', $recursive = false)
 	{
-		if (!isset($this->_blocks[$parent])) {
-			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $parent), SIGMA_BLOCK_NOT_FOUND);
+		if ( !isset($this->_blocks[$parent]) )
+		{
+			throw new SigmaException( BLOCK_NOT_FOUND, [$parent] );
 		}
-		if (!$recursive) {
+
+		if ( !$recursive )
+		{
 			return isset($this->_children[$parent])? array_keys($this->_children[$parent]): array();
-		} else {
+		}
+		else
+		{
 			$ret = array('name' => $parent);
 			if (!empty($this->_children[$parent])) {
 				$ret['children'] = array();
@@ -359,37 +417,45 @@ class Block
 	 * Recursively builds a list of all blocks within the template.
 	 *
 	 * @param string $string template to be scanned
-	 *
 	 * @return mixed array of block names on success or error object on failure
-	 * @throws PEAR_Error
-	 * @see    $_blocks
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 * @see $_blocks
 	 */
 	private function _buildBlocks($string)
 	{
 		$blocks = array();
-		if (preg_match_all($this->blockRegExp, $string, $regs, PREG_SET_ORDER)) {
-			foreach ($regs as $match) {
-				$blockname    = $match[1];
-				$blockcontent = $match[2];
-				if (isset($this->_blocks[$blockname]) || isset($blocks[$blockname])) {
-					return new \Exception(
-						$this->errorMessage(SIGMA_BLOCK_DUPLICATE, $blockname), SIGMA_BLOCK_DUPLICATE
-					);
-				}
-				$this->_blocks[$blockname] = $blockcontent;
-				$blocks[$blockname] = true;
-				$inner              = $this->_buildBlocks($blockcontent);
-				if (is_a($inner, 'PEAR_Error')) {
-					return $inner;
-				}
-				foreach ($inner as $name => $v) {
-					$pattern     = sprintf('@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name);
-					$replacement = $this->openingDelimiter.'__'.$name.'__'.$this->closingDelimiter;
-					$this->_children[$blockname][$name] = true;
-					$this->_blocks[$blockname]          = preg_replace(
-						$pattern, $replacement, $this->_blocks[$blockname]
-					);
-				}
+		// When not blocks are found, return immediately.
+		if ( \preg_match_all($this->blockRegExp, $string, $regs, PREG_SET_ORDER) < 1 )
+		{
+			return $blocks;
+		}
+
+		foreach ( $regs as $match )
+		{
+			$blockname    = $match[1];
+			$blockcontent = $match[2];
+
+			// Don't allow two blocks with the same name.
+			if ( isset($this->_blocks[$blockname]) || isset($blocks[$blockname]) )
+			{
+				throw new SigmaException(BLOCK_DUPLICATE, [$blockname] );
+			}
+
+			$this->_blocks[$blockname] = $blockcontent;
+			$blocks[$blockname] = true;
+			$inner              = $this->_buildBlocks($blockcontent);
+
+			if (is_a($inner, 'PEAR_Error')) {
+				return $inner;
+			}
+
+			foreach ($inner as $name => $v) {
+				$pattern     = sprintf('@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name);
+				$replacement = $this->openingDelimiter.'__'.$name.'__'.$this->closingDelimiter;
+				$this->_children[$blockname][$name] = true;
+				$this->_blocks[$blockname]          = preg_replace(
+					$pattern, $replacement, $this->_blocks[$blockname]
+				);
 			}
 		}
 		return $blocks;

@@ -50,7 +50,6 @@ const
 BAD_ROOT_ERROR = -15,
 BAD_CACHE_ROOT_ERROR = -16;
 
-use \Kshabazz\Sigma\Parser;
 use \Kshabazz\Sigma\Handlers\Block;
 
 /**
@@ -324,7 +323,7 @@ class Sigma
      *
      * @see   setRoot(), setCacheRoot()
      */
-    function __construct($root = '', $cacheRoot = '')
+    function __construct( $root = '', $cacheRoot = '' )
     {
         $this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
                                        '(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
@@ -334,9 +333,9 @@ class Sigma
                                        . ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
         $this->functionRegExp        = '@' . $this->functionPrefix . '(' . $this->functionnameRegExp . ')\s*\(@sm';
 
-	    $this->parser = new Parser($root, $cacheRoot);
-        $this->setRoot($root);
-        $this->setCacheRoot($cacheRoot);
+		$this->parser = new Parser( $root, $cacheRoot );
+		$this->setRoot( $root );
+		$this->setCacheRoot( $cacheRoot );
 
         $this->setCallbackFunction('h', array(&$this, '_htmlspecialchars'));
         $this->setCallbackFunction('e', array(&$this, '_htmlentities'));

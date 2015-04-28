@@ -30,15 +30,6 @@ class Parser
 	public $closingDelimiter = '}';
 
 	/**
-	 * RegExp for matching the block names in the template.
-	 * Per default "sm" is used as the regexp modifier, "i" is missing.
-	 * That means a case sensitive search is done.
-	 * @var      string
-	 * @see      $variablenameRegExp, $openingDelimiter, $closingDelimiter
-	 */
-	public $blocknameRegExp = '[0-9A-Za-z_-]+';
-
-	/**
 	 * RegExp matching a variable placeholder in the template.
 	 * Per default "sm" is used as the regexp modifier, "i" is missing.
 	 * That means a case sensitive search is done.
@@ -65,13 +56,6 @@ class Parser
 	 * @see      $variablesRegExp, HTML_Template_Sigma()
 	 */
 	var $removeVariablesRegExp = '';
-
-	/**
-	 * RegExp used to find blocks and their content, filled by the constructor
-	 * @var      string
-	 * @see      HTML_Template_Sigma()
-	 */
-	var $blockRegExp = '';
 
 	/**
 	 * Name of the current block
@@ -103,12 +87,6 @@ class Parser
 	 * @var  string
 	 */
 	var $includeRegExp = '#<!--\s+INCLUDE\s+(\S+)\s+-->#im';
-
-	/**
-	 * RegExp used to find (and remove) comments in the template
-	 * @var  string
-	 */
-	var $commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
 
 	/**
 	 * Root directory for "source" templates
@@ -203,11 +181,7 @@ class Parser
 			'(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
 		$this->removeVariablesRegExp = '@' . $this->openingDelimiter . '\s*(' . $this->variablenameRegExp . ')\s*'
 			. $this->closingDelimiter . '@sm';
-		$this->blockRegExp           = '@<!--\s+BEGIN\s+(' . $this->blocknameRegExp
-			. ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
 		$this->functionRegExp        = '@' . $this->functionPrefix . '(' . $this->functionnameRegExp . ')\s*\(@sm';
-		$this->setRoot($root);
-		$this->setCacheRoot($cacheRoot);
 
 		$this->setCallbackFunction('h', array(&$this, '_htmlspecialchars'));
 		$this->setCallbackFunction('e', array(&$this, '_htmlentities'));
@@ -225,45 +199,6 @@ class Parser
 	public function parseCurrentBlock()
 	{
 		return $this->parse($this->currentBlock);
-	}
-
-	/**
-	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
-	 *
-	 * The "prepared" template contains an internal representation of template
-	 * structure: essentially a serialized array of $_blocks, $_blockVariables,
-	 * $_children and $_functions, may also contain $_triggers. This allows
-	 * to bypass expensive calls to _buildBlockVariables() and especially
-	 * _buildBlocks() when reading the "prepared" template instead of
-	 * the "source" one.
-	 *
-	 * The files in this cache do not have any TTL and are regenerated when the
-	 * source templates change.
-	 *
-	 * @param string $pRoot directory name
-	 * @see Parser(), _getCached(), _writeCache()
-	 * @return \Kshabazz\Sigma\Parser
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	public function setCacheRoot( $pRoot )
-	{
-		// No caching will be use when directory is not set.
-		if ( empty($pRoot) ) {
-			$pRoot = null;
-		}
-		// Ensure the directory has the trailing slash, helps shorten code.
-		else if ( \is_dir($pRoot) ) {
-			if ( DIRECTORY_SEPARATOR != substr($pRoot, -1) ) {
-				$pRoot .= DIRECTORY_SEPARATOR;
-			}
-		// Throw an error when the directory does not exist.
-		} else {
-			throw new SigmaException( SIGMA_BAD_CACHE_ROOT_ERROR, [$pRoot] );
-		}
-
-		$this->_cacheRoot = $pRoot;
-
-		return $this;
 	}
 
 	/**
@@ -321,29 +256,6 @@ class Parser
 		);
 		return SIGMA_OK;
 	}
-
-	/**
-	 * Sets the file root for templates. The file root gets prefixed to all
-	 * filenames passed to the object.
-	 *
-	 * @param string $pRoot directory name
-	 * @see Parser()
-	 * @return \Kshabazz\Sigma\Parser
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	public function setRoot( $pRoot )
-	{
-		if ( \is_dir($pRoot) )
-		{
-			$this->fileRoot = $pRoot;
-			return $this;
-		}
-
-		throw new SigmaException( SIGMA_BAD_ROOT_ERROR, [$pRoot] );
-	}
-
-
-
 
 	/**
 	 * Sets the option for the template class
