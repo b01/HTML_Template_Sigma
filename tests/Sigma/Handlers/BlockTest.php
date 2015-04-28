@@ -21,7 +21,7 @@ class BlockTest extends \PHPUnit_Framework_TestCase
 
 		$blockList = $blocks->getBlockList();
 
-		var_dump($blockList);
+		$this->assertEquals( 'TEST_1', $blockList[0] );
 	}
 }
 ?>
