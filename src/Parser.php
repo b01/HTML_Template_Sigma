@@ -197,7 +197,7 @@ class Parser
 	 *
 	 * @see   setRoot(), setCacheRoot()
 	 */
-	function __construct($root , $cacheRoot)
+	function __construct($root , $cacheRoot = null)
 	{
 		$this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
 			'(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
@@ -247,15 +247,23 @@ class Parser
 	 */
 	public function setCacheRoot( $pRoot )
 	{
-		if (is_dir($pRoot)) {
-			$this->_cacheRoot = $pRoot;
-			return $this;
+		// No caching will be use when directory is not set.
+		if ( empty($pRoot) ) {
+			$pRoot = null;
+		}
+		// Ensure the directory has the trailing slash, helps shorten code.
+		else if ( \is_dir($pRoot) ) {
+			if ( DIRECTORY_SEPARATOR != substr($pRoot, -1) ) {
+				$pRoot .= DIRECTORY_SEPARATOR;
+			}
+		// Throw an error when the directory does not exist.
+		} else {
+			throw new SigmaException( SIGMA_BAD_CACHE_ROOT_ERROR, [$pRoot] );
 		}
 
-		throw new SigmaException(
-			SigmaException::errorMessage(SIGMA_BAD_CACHE_ROOT_ERROR),
-			SIGMA_BAD_CACHE_ROOT_ERROR
-		);
+		$this->_cacheRoot = $pRoot;
+
+		return $this;
 	}
 
 	/**
@@ -331,10 +339,7 @@ class Parser
 			return $this;
 		}
 
-		throw new SigmaException(
-			SigmaException::errorMessage(SIGMA_BAD_ROOT_ERROR),
-			SIGMA_BAD_ROOT_ERROR
-		);
+		throw new SigmaException( SIGMA_BAD_ROOT_ERROR, [$pRoot] );
 	}
 
 
@@ -389,37 +394,40 @@ class Parser
 	 * @param bool   $clear whether to clear parsed block contents
 	 *
 	 * @return string block with all replacements done
-	 * @throws PEAR_Error
+	 * @throws SigmaException
 	 * @access public
 	 * @see    show()
 	 */
 	function get($block = '__global__', $clear = false)
 	{
+		// When the block is not in the list, throw an error.
 		if (!isset($this->_blocks[$block])) {
-			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+			throw new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
 		}
+
+		// I think this parses thow whole template and populates $this->_parsedBlocks.
 		if ('__global__' == $block && !$this->flagGlobalParsed) {
 			$this->parse('__global__');
 		}
+
 		// return the parsed block, removing the unknown placeholders if needed
 		if (!isset($this->_parsedBlocks[$block])) {
 			return '';
-
-		} else {
-			$ret = $this->_parsedBlocks[$block];
-			if ($clear) {
-				unset($this->_parsedBlocks[$block]);
-			}
-			if ($this->removeUnknownVariables) {
-				$ret = preg_replace($this->removeVariablesRegExp, '', $ret);
-			}
-			if ($this->_options['preserve_data']) {
-				$ret = str_replace(
-					$this->openingDelimiter . '%preserved%' . $this->closingDelimiter, $this->openingDelimiter, $ret
-				);
-			}
-			return $ret;
 		}
+
+		$ret = $this->_parsedBlocks[$block];
+		if ($clear) {
+			unset($this->_parsedBlocks[$block]);
+		}
+		if ($this->removeUnknownVariables) {
+			$ret = preg_replace($this->removeVariablesRegExp, '', $ret);
+		}
+		if ($this->_options['preserve_data']) {
+			$ret = str_replace(
+				$this->openingDelimiter . '%preserved%' . $this->closingDelimiter, $this->openingDelimiter, $ret
+			);
+		}
+		return $ret;
 	}
 
 

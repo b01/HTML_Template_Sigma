@@ -27,7 +27,7 @@ class ParserTest extends \PHPUnit_Framework_TestCase
 	public function test_bad_setCacheRoot()
 	{
 		$parser = new Parser( \FIXTURES_PATH,  \FIXTURES_PATH );
-		$parser->setCacheRoot( '' );
+		$parser->setCacheRoot( 'does_not_exists' );
 	}
 }
 ?>

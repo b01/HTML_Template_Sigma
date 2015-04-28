@@ -50,6 +50,9 @@ const
 BAD_ROOT_ERROR = -15,
 BAD_CACHE_ROOT_ERROR = -16;
 
+use \Kshabazz\Sigma\Parser;
+use \Kshabazz\Sigma\Handlers\Block;
+
 /**
  * Class Sigma
  *
@@ -58,7 +61,16 @@ BAD_CACHE_ROOT_ERROR = -16;
  */
 class Sigma
 {
-    /**
+	/**
+	 * Template blocks and their content
+	 *
+	 * @var \Kshabazz\Sigma\Handlers\Block;
+	 * @see \Kshabazz\Sigma\Handlers\Block::buildBlocks()
+	 * @access private
+	 */
+	private $blocks;
+
+	/**
      * First character of a variable placeholder ( _{_VARIABLE} ).
      * @var      string
      * @access   public
@@ -321,6 +333,8 @@ class Sigma
         $this->blockRegExp           = '@<!--\s+BEGIN\s+(' . $this->blocknameRegExp
                                        . ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
         $this->functionRegExp        = '@' . $this->functionPrefix . '(' . $this->functionnameRegExp . ')\s*\(@sm';
+
+	    $this->parser = new Parser($root, $cacheRoot);
         $this->setRoot($root);
         $this->setCacheRoot($cacheRoot);
 
@@ -331,56 +345,72 @@ class Sigma
         $this->setCallbackFunction('j', array(&$this, '_jsEscape'));
     }
 
+	/**
+	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
+	 *
+	 * The "prepared" template contains an internal representation of template
+	 * structure: essentially a serialized array of $_blocks, $_blockVariables,
+	 * $_children and $_functions, may also contain $_triggers. This allows
+	 * to bypass expensive calls to _buildBlockVariables() and especially
+	 * _buildBlocks() when reading the "prepared" template instead of
+	 * the "source" one.
+	 *
+	 * The files in this cache do not have any TTL and are regenerated when the
+	 * source templates change.
+	 *
+	 * @param string $pRoot directory name
+	 * @see Parser(), _getCached(), _writeCache()
+	 * @return \Kshabazz\Sigma\Parser
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	public function setCacheRoot( $pRoot )
+	{
+		// No caching will be use when directory is not set.
+		if ( empty($pRoot) ) {
+			$pRoot = null;
+		}
+		// Ensure the directory has the trailing slash, helps shorten code.
+		else if ( \is_dir($pRoot) ) {
+			if ( DIRECTORY_SEPARATOR != substr($pRoot, -1) ) {
+				$pRoot .= DIRECTORY_SEPARATOR;
+			}
+			// Throw an error when the directory does not exist.
+		} else {
+			throw new SigmaException( BAD_CACHE_ROOT_ERROR, [$pRoot] );
+		}
 
-    /**
-     * Sets the file root for templates. The file root gets prefixed to all
-     * filenames passed to the object.
-     *
-     * @param string $root directory name
-     *
-     * @see    HTML_Template_Sigma()
-     * @access public
-     * @return void
-     */
-    function setRoot($root)
-    {
-	    // Add a trailing slash, when not empty and it's missing.
-        if (('' != $root) && (DIRECTORY_SEPARATOR != substr($root, -1))) {
-            $root .= DIRECTORY_SEPARATOR;
-        }
-        $this->fileRoot = $root;
-    }
+		$this->_cacheRoot = $pRoot;
 
+		return $this;
+	}
 
-    /**
-     * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
-     *
-     * The "prepared" template contains an internal representation of template
-     * structure: essentially a serialized array of $_blocks, $_blockVariables,
-     * $_children and $_functions, may also contain $_triggers. This allows
-     * to bypass expensive calls to _buildBlockVariables() and especially
-     * _buildBlocks() when reading the "prepared" template instead of
-     * the "source" one.
-     *
-     * The files in this cache do not have any TTL and are regenerated when the
-     * source templates change.
-     *
-     * @param string $root directory name
-     *
-     * @see    HTML_Template_Sigma(), _getCached(), _writeCache()
-     * @access public
-     * @return void
-     */
-    function setCacheRoot($root)
-    {
-        if (empty($root)) {
-            $root = null;
-	        // Add a trailing slash when missing.
-        } elseif (DIRECTORY_SEPARATOR != substr($root, -1)) {
-            $root .= DIRECTORY_SEPARATOR;
-        }
-        $this->_cacheRoot = $root;
-    }
+	/**
+	 * Sets the file root for templates. The file root gets prefixed to all
+	 * filenames passed to the object.
+	 *
+	 * @param string $pRoot directory name
+	 * @see Parser()
+	 * @return \Kshabazz\Sigma\Parser
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	public function setRoot( $pRoot )
+	{
+		if ( \is_dir($pRoot) )
+		{
+			// Add a trailing slash, when missing.
+			if ( DIRECTORY_SEPARATOR != \substr($pRoot, -1) )
+			{
+				$pRoot .= DIRECTORY_SEPARATOR;
+			}
+			$this->fileRoot = $pRoot;
+		}
+		else
+		{
+			throw new SigmaException( SIGMA_BAD_ROOT_ERROR, [$pRoot] );
+		}
+
+		return $this;
+	}
 
 
     /**

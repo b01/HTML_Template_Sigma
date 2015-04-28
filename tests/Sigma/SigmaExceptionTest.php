@@ -14,6 +14,7 @@ use const
 class SigmaExceptionTest extends \PHPUnit_Framework_TestCase
 {
 	/**
+	 * @expectedException \Kshabazz\Sigma\SigmaException
 	 * @expectedExceptionMessage unknown error
 	 */
 	public function test_unknown_error_code()
@@ -22,6 +23,7 @@ class SigmaExceptionTest extends \PHPUnit_Framework_TestCase
 	}
 
 	/**
+	 * @expectedException \Kshabazz\Sigma\SigmaException
 	 * @expectedExceptionMessage "test"
 	 */
 	public function test_parsed_error_message()
@@ -30,7 +32,8 @@ class SigmaExceptionTest extends \PHPUnit_Framework_TestCase
 	}
 
 	/**
-	 * @expectedExceptionMessage "test"
+	 * @expectedException \Kshabazz\Sigma\SigmaException
+	 * @expectedExceptionMessage unknown error
 	 */
 	public function test_error_message()
 	{

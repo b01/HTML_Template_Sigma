@@ -2,6 +2,10 @@
 
 use Kshabazz\Sigma\SigmaException;
 
+use const
+	\Kshabazz\Sigma\SIGMA_OK,
+	\Kshabazz\Sigma\SIGMA_BLOCK_EXISTS;
+
 /**
  * Class Block
  *
@@ -15,6 +19,14 @@ class Block
 	 * @see _buildBlocks()
 	 */
 	private $_blocks = array();
+
+	/**
+	 * @param $string
+	 */
+	public function __construct($string)
+	{
+		$this->_buildBlocks($string);
+	}
 
 	/**
 	 * Adds a block to the template changing a variable placeholder to a block placeholder.
@@ -344,7 +356,7 @@ class Block
 	}
 
 	/**
-	 * Recusively builds a list of all blocks within the template.
+	 * Recursively builds a list of all blocks within the template.
 	 *
 	 * @param string $string template to be scanned
 	 *
