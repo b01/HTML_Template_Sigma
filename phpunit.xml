@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <phpunit bootstrap="tests/bootstrap.php"
 		 forceCoversAnnotation="true"
-		 verbose="true">
+		 beStrictAboutTestsThatDoNotTestAnything="true">
     <testsuites>
         <testsuite name="All">
             <directory>tests</directory>
