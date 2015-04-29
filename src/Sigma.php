@@ -323,7 +323,7 @@ class Sigma
      *
      * @see   setRoot(), setCacheRoot()
      */
-    function __construct( $root = '', $cacheRoot = '' )
+    public function __construct( $root = '', $cacheRoot = '' )
     {
         $this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
                                        '(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
@@ -394,19 +394,14 @@ class Sigma
 	 */
 	public function setRoot( $pRoot )
 	{
-		if ( \is_dir($pRoot) )
+		$root = (string) $pRoot;
+		// Add a trailing slash, when missing.
+		if ( !empty($root) && DIRECTORY_SEPARATOR != \substr($root, -1) )
 		{
-			// Add a trailing slash, when missing.
-			if ( DIRECTORY_SEPARATOR != \substr($pRoot, -1) )
-			{
-				$pRoot .= DIRECTORY_SEPARATOR;
-			}
-			$this->fileRoot = $pRoot;
+			$root .= DIRECTORY_SEPARATOR;
 		}
-		else
-		{
-			throw new SigmaException( SIGMA_BAD_ROOT_ERROR, [$pRoot] );
-		}
+
+		$this->fileRoot = $root;
 
 		return $this;
 	}

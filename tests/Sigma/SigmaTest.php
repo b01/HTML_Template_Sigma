@@ -5,27 +5,30 @@ use Kshabazz\Sigma\Sigma;
 /**
  * Class SigmaTest
  *
+ * @coversDefaultClass \Kshabazz\Sigma\Sigma
  * @package Kshabazz\Sigma\Tests
  */
 class SigmaTest extends \PHPUnit_Framework_TestCase
 {
-
-	public function test_setRoot()
+	/**
+	 * @covers ::__construct
+	 */
+	public function test_construct()
 	{
 		$parser = new Sigma( \FIXTURES_PATH,  \FIXTURES_PATH );
 		$this->assertInstanceOf( '\\Kshabazz\\Sigma\\Sigma', $parser );
 	}
 
 	/**
-	 * @expectedException \Kshabazz\Sigma\SigmaException
-	 * @expectedExceptionMessage Cannot set root to a directory that does not exists
+	 * @covers ::setRoot
 	 */
-	public function test_bad_setRoot()
+	public function test_setRoot()
 	{
 		$parser = new Sigma('', '');
 	}
 
 	/**
+	 * @covers ::setCacheRoot
 	 * @expectedException \Kshabazz\Sigma\SigmaException
 	 * @expectedExceptionMessage Cannot set cache root to a directory that does not exists
 	 */
