@@ -3,10 +3,12 @@
 use Kshabazz\Sigma\SigmaException;
 
 use const
-	\Kshabazz\Sigma\SIGMA_OK,
-	\Kshabazz\Sigma\SIGMA_BLOCK_EXISTS,
 	\Kshabazz\Sigma\BLOCK_DUPLICATE,
-	\Kshabazz\Sigma\BLOCK_NOT_FOUND;
+	\Kshabazz\Sigma\BLOCK_EXISTS,
+	\Kshabazz\Sigma\BLOCK_NOT_FOUND,
+	\Kshabazz\Sigma\OK,
+	\Kshabazz\Sigma\PLACEHOLDER_DUPLICATE,
+	\Kshabazz\Sigma\PLACEHOLDER_NOT_FOUND;
 
 /**
  * Class Block
@@ -21,14 +23,14 @@ class Block
 	 * @var array
 	 * @see _buildBlocks()
 	 */
-	private $_blocks = array();
+	private $_blocks;
 
 	/**
 	 * RegExp for matching the block names in the template.
 	 * Per default "sm" is used as the regexp modifier, "i" is missing.
 	 * That means a case sensitive search is done.
-	 * @var      string
-	 * @see      $variablenameRegExp, $openingDelimiter, $closingDelimiter
+	 * @var string
+	 * @see $variablenameRegExp, $openingDelimiter, $closingDelimiter
 	 */
 	private $blocknameRegExp;
 
@@ -39,6 +41,21 @@ class Block
 	 * @see HTML_Template_Sigma()
 	 */
 	private $blockRegExp;
+
+	/**
+	 * Variable names that appear in the block
+	 *
+	 * @var array
+	 * @see _buildBlockVariables()
+	 */
+	private $_blockVariables;
+
+	/**
+	 * Inner blocks inside the block
+	 * @var array
+	 * @see _buildBlocks()
+	 */
+	private $_children;
 
 	/**
 	 * RegExp used to find (and remove) comments in the template
@@ -67,6 +84,9 @@ class Block
 	 */
 	public function __construct( $template, $openingDelimiter, $closingDelimiter )
 	{
+		$this->_blocks = [];
+		$this->_blockVariables = [];
+		$this->_children = [];
 		$this->openingDelimiter = $openingDelimiter;
 		$this->closingDelimiter = $closingDelimiter;
 		$this->blocknameRegExp  = '[0-9A-Za-z_-]+';
@@ -90,35 +110,37 @@ class Block
 	 * inside the original template.
 	 *
 	 * The block content must not start with <!-- BEGIN blockname --> and end with
-	 * <!-- END blockname -->, if it does the error will be thrown.
+	 * <!-- END blockname -->, if it does, an error will be thrown.
 	 *
 	 * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
-	 * @param string $block       name of the block to be added
-	 * @param string $template    content of the block
+	 * @param string $block name of the block to be added
+	 * @param string $template content of the block
 	 *
 	 * @access public
 	 * @return mixed SIGMA_OK on success, error object on failure
-	 * @throws PEAR_Error
+	 * @throws \Kshabazz\Sigma\SigmaException
 	 * @see    addBlockfile()
 	 */
-	function addBlock($placeholder, $block, $template)
+	function addBlock( $placeholder, $block, $template )
 	{
-		if (isset($this->_blocks[$block])) {
-			return new SigmaException(
-				SigmaException::errorMessage(SIGMA_BLOCK_EXISTS, $block),
-				SIGMA_BLOCK_EXISTS
-			);
+		// Throw an error if the block already exists.
+		if ( isset($this->_blocks[$block]) )
+		{
+			throw new SigmaException( BLOCK_EXISTS, [$block] );
 		}
-		$parents = $this->_findParentBlocks($placeholder);
-		if (0 == count($parents)) {
-			return new \Exception(
-				$this->errorMessage(SIGMA_PLACEHOLDER_NOT_FOUND, $placeholder), SIGMA_PLACEHOLDER_NOT_FOUND
-			);
 
-		} elseif (count($parents) > 1) {
-			return new \Exception(
-				$this->errorMessage(SIGMA_PLACEHOLDER_DUPLICATE, $placeholder), SIGMA_PLACEHOLDER_DUPLICATE
-			);
+		// Find the blocks that contain the placeholder.
+		$parents = $this->_findParentBlocks( $placeholder );
+
+		var_dump($placeholder, $parents);
+		// When none or more then one block contains the placeholder, throw an error.
+		if ( 0 == count($parents) )
+		{
+			throw new SigmaException( PLACEHOLDER_NOT_FOUND, [$placeholder] );
+		}
+		elseif (count($parents) > 1)
+		{
+			throw new SigmaException( PLACEHOLDER_DUPLICATE, $placeholder );
 		}
 
 		$list = $this->_buildBlocks(
@@ -423,8 +445,8 @@ class Block
 	 */
 	private function _buildBlocks($string)
 	{
-		$blocks = array();
-		// When not blocks are found, return immediately.
+		$blocks = [];
+		// When no blocks are found, return immediately.
 		if ( \preg_match_all($this->blockRegExp, $string, $regs, PREG_SET_ORDER) < 1 )
 		{
 			return $blocks;
@@ -467,16 +489,19 @@ class Block
 	 * @param string $variable variable name
 	 *
 	 * @return array block names
-	 * @see    addBlock(), addBlockfile(), placeholderExists()
+	 * @see addBlock(), addBlockfile(), placeholderExists()
 	 */
-	private function _findParentBlocks($variable)
+	private function _findParentBlocks( $variable )
 	{
-		$parents = array();
-		foreach ($this->_blockVariables as $blockname => $varnames) {
-			if (!empty($varnames[$variable])) {
+		$parents = [];
+		foreach ( $this->_blockVariables as $blockname => $varnames )
+		{
+			if ( !empty($varnames[$variable]) )
+			{
 				$parents[] = $blockname;
 			}
 		}
+
 		return $parents;
 	}
 

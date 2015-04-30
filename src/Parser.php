@@ -123,19 +123,6 @@ class Parser
 	 */
 	private $_parsedBlocks = array();
 
-	/**
-	 * Variable names that appear in the block
-	 * @var      array
-	 * @see      _buildBlockVariables()
-	 */
-	private $_blockVariables = array();
-
-	/**
-	 * Inner blocks inside the block
-	 * @var      array
-	 * @see      _buildBlocks()
-	 */
-	private $_children = array();
 
 	/**
 	 * List of blocks to preserve even if they are "empty"
