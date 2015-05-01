@@ -1,75 +1,132 @@
 <?php namespace Kshabazz\Sigma;
+/**
+ * Implementation of Integrated Templates API with template 'compilation' added.
+ *
+ * PHP versions 4 and 5
+ *
+ * LICENSE: This source file is subject to version 3.01 of the PHP license
+ * that is available through the world-wide-web at the following URI:
+ * http://www.php.net/license/3_01.txt If you did not receive a copy of
+ * the PHP License and are unable to obtain it through the web, please
+ * send a note to license@php.net so we can mail you a copy immediately.
+ *
+ * @category  HTML
+ * @package   HTML_Template_Sigma
+ * @author    Ulf Wendel <ulf.wendel@phpdoc.de>
+ * @author    Alexey Borzov <avb@php.net>
+ * @copyright 2001-2007 The PHP Group
+ * @license   http://www.php.net/license/3_01.txt PHP License 3.01
+ * @link      http://pear.php.net/package/HTML_Template_Sigma
+ */
 
 /**#@+
  * Error codes
  * @see HTML_Template_Sigma::errorMessage()
  */
-const
-	SIGMA_BAD_ROOT_ERROR = -15,
-	SIGMA_BAD_CACHE_ROOT_ERROR = -16;
+define('SIGMA_OK',                         1);
+define('SIGMA_ERROR',                     -1);
+define('SIGMA_TPL_NOT_FOUND',             -2);
+define('SIGMA_BLOCK_NOT_FOUND',           -3);
+define('SIGMA_BLOCK_DUPLICATE',           -4);
+define('SIGMA_CACHE_ERROR',               -5);
+define('SIGMA_UNKNOWN_OPTION',            -6);
+define('SIGMA_PLACEHOLDER_NOT_FOUND',     -10);
+define('SIGMA_PLACEHOLDER_DUPLICATE',     -11);
+define('SIGMA_BLOCK_EXISTS',              -12);
+define('SIGMA_INVALID_CALLBACK',          -13);
+define('SIGMA_CALLBACK_SYNTAX_ERROR',     -14);
+define('Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)));
 /**#@-*/
 
-const
-	SIGMA_OK = 1,
-	SIGMA_ERROR = -1,
-	SIGMA_TPL_NOT_FOUND = -2,
-	SIGMA_BLOCK_NOT_FOUND = -3,
-	SIGMA_BLOCK_DUPLICATE = -4,
-	SIGMA_CACHE_ERROR = -5,
-	SIGMA_UNKNOWN_OPTION = -6,
-	SIGMA_PLACEHOLDER_NOT_FOUND = -10,
-	SIGMA_PLACEHOLDER_DUPLICATE = -11,
-	SIGMA_BLOCK_EXISTS = -12,
-	SIGMA_INVALID_CALLBACK = -13,
-	SIGMA_CALLBACK_SYNTAX_ERROR = -14;
-define( 'Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)) );
-
-// This is what the above will change to, keeping both until
-// the class breakup is done.
-const
-	OK = 1,
-	ERROR = -1,
-	TPL_NOT_FOUND = -2,
-	BLOCK_NOT_FOUND = -3,
-	BLOCK_DUPLICATE = -4,
-	CACHE_ERROR = -5,
-	UNKNOWN_OPTION = -6,
-	PLACEHOLDER_NOT_FOUND = -10,
-	PLACEHOLDER_DUPLICATE = -11,
-	BLOCK_EXISTS = -12,
-	INVALID_CALLBACK = -13,
-	CALLBACK_SYNTAX_ERROR = -14;
-// Phase this out, we should be able to detect the features we need.
-define('Sigma\\OS_WINDOWS', \strtoupper(\substr(PHP_OS, 0, 3)) );
-
-/**#@+
- * Error codes
- * @see HTML_Template_Sigma::errorMessage()
- */
-const
-BAD_ROOT_ERROR = -15,
-BAD_CACHE_ROOT_ERROR = -16;
-
-use \Kshabazz\Sigma\Handlers\Block;
-
 /**
- * Class Sigma
- *
- * @version  Release: @package_version@
- * @package Kshabazz\Sigma
- */
+* Implementation of Integrated Templates API with template 'compilation' added.
+*
+* The main new feature in Sigma is the template 'compilation'. Consider the
+* following: when loading a template file the engine has to parse it using
+* regular expressions to find all the blocks and variable placeholders. This
+* is a very "expensive" operation and is definitely an overkill to do on
+* every page request: templates seldom change on production websites. This is
+* where the cache kicks in: it saves an internal representation of the
+* template structure into a file and this file gets loaded instead of the
+* source one on subsequent requests (unless the source changes, of course).
+*
+* While HTML_Template_Sigma inherits PHPLib Template's template syntax, it has
+* an API which is easier to understand. When using HTML_Template_PHPLIB, you
+* have to explicitly name a source and a target the block gets parsed into.
+* This gives maximum flexibility but requires full knowledge of template
+* structure from the programmer.
+*
+* Integrated Template on the other hands manages block nesting and parsing
+* itself. The engine knows that inner1 is a child of block2, there's
+* no need to tell it about this:
+*
+* <pre>
+* + __global__ (hidden and automatically added)
+*     + block1
+*     + block2
+*         + inner1
+*         + inner2
+* </pre>
+*
+* To add content to block1 you simply type:
+* <code>$tpl->setCurrentBlock("block1");</code>
+* and repeat this as often as needed:
+* <code>
+*   $tpl->setVariable(...);
+*   $tpl->parseCurrentBlock();
+* </code>
+*
+* To add content to block2 you would type something like:
+* <code>
+* $tpl->setCurrentBlock("inner1");
+* $tpl->setVariable(...);
+* $tpl->parseCurrentBlock();
+*
+* $tpl->setVariable(...);
+* $tpl->parseCurrentBlock();
+*
+* $tpl->parse("block2");
+* </code>
+*
+* This will result in one repetition of block2 which contains two repetitions
+* of inner1. inner2 will be removed if $removeEmptyBlock is set to true (which
+* is the default).
+*
+* Usage:
+* <code>
+* $tpl = new HTML_Template_Sigma( [string filerootdir], [string cacherootdir] );
+*
+* // load a template or set it with setTemplate()
+* $tpl->loadTemplatefile( string filename [, boolean removeUnknownVariables, boolean removeEmptyBlocks] )
+*
+* // set "global" Variables meaning variables not beeing within a (inner) block
+* $tpl->setVariable( string variablename, mixed value );
+*
+* // like with the HTML_Template_PHPLIB there's a second way to use setVariable()
+* $tpl->setVariable( array ( string varname => mixed value ) );
+*
+* // Let's use any block, even a deeply nested one
+* $tpl->setCurrentBlock( string blockname );
+*
+* // repeat this as often as you need it.
+* $tpl->setVariable( array ( string varname => mixed value ) );
+* $tpl->parseCurrentBlock();
+*
+* // get the parsed template or print it: $tpl->show()
+* $html = $tpl->get();
+* </code>
+*
+* @category HTML
+* @package  HTML_Template_Sigma
+* @author   Ulf Wendel <ulf.wendel@phpdoc.de>
+* @author   Alexey Borzov <avb@php.net>
+* @license  http://www.php.net/license/3_01.txt PHP License 3.01
+* @version  Release: @package_version@
+* @link     http://pear.php.net/package/HTML_Template_Sigma
+*/
 class Sigma
 {
-	/**
-	 * Template blocks and their content
-	 *
-	 * @var \Kshabazz\Sigma\Handlers\Block;
-	 * @see \Kshabazz\Sigma\Handlers\Block::buildBlocks()
-	 * @access private
-	 */
-	private $blocks;
-
-	/**
+    /**
      * First character of a variable placeholder ( _{_VARIABLE} ).
      * @var      string
      * @access   public
@@ -323,7 +380,7 @@ class Sigma
      *
      * @see   setRoot(), setCacheRoot()
      */
-    public function __construct( $root = '', $cacheRoot = '' )
+    function __construct($root = '', $cacheRoot = '')
     {
         $this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
                                        '(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
@@ -332,10 +389,8 @@ class Sigma
         $this->blockRegExp           = '@<!--\s+BEGIN\s+(' . $this->blocknameRegExp
                                        . ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
         $this->functionRegExp        = '@' . $this->functionPrefix . '(' . $this->functionnameRegExp . ')\s*\(@sm';
-
-		$this->parser = new Parser( $root, $cacheRoot );
-		$this->setRoot( $root );
-		$this->setCacheRoot( $cacheRoot );
+        $this->setRoot($root);
+        $this->setCacheRoot($cacheRoot);
 
         $this->setCallbackFunction('h', array(&$this, '_htmlspecialchars'));
         $this->setCallbackFunction('e', array(&$this, '_htmlentities'));
@@ -344,67 +399,54 @@ class Sigma
         $this->setCallbackFunction('j', array(&$this, '_jsEscape'));
     }
 
-	/**
-	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
-	 *
-	 * The "prepared" template contains an internal representation of template
-	 * structure: essentially a serialized array of $_blocks, $_blockVariables,
-	 * $_children and $_functions, may also contain $_triggers. This allows
-	 * to bypass expensive calls to _buildBlockVariables() and especially
-	 * _buildBlocks() when reading the "prepared" template instead of
-	 * the "source" one.
-	 *
-	 * The files in this cache do not have any TTL and are regenerated when the
-	 * source templates change.
-	 *
-	 * @param string $pRoot directory name
-	 * @see Parser(), _getCached(), _writeCache()
-	 * @return \Kshabazz\Sigma\Parser
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	public function setCacheRoot( $pRoot )
-	{
-		// No caching will be use when directory is not set.
-		if ( empty($pRoot) ) {
-			$pRoot = null;
-		}
-		// Ensure the directory has the trailing slash, helps shorten code.
-		else if ( \is_dir($pRoot) ) {
-			if ( DIRECTORY_SEPARATOR != substr($pRoot, -1) ) {
-				$pRoot .= DIRECTORY_SEPARATOR;
-			}
-			// Throw an error when the directory does not exist.
-		} else {
-			throw new SigmaException( BAD_CACHE_ROOT_ERROR, [$pRoot] );
-		}
 
-		$this->_cacheRoot = $pRoot;
+    /**
+     * Sets the file root for templates. The file root gets prefixed to all
+     * filenames passed to the object.
+     *
+     * @param string $root directory name
+     *
+     * @see    HTML_Template_Sigma()
+     * @access public
+     * @return void
+     */
+    function setRoot($root)
+    {
+        if (('' != $root) && (DIRECTORY_SEPARATOR != substr($root, -1))) {
+            $root .= DIRECTORY_SEPARATOR;
+        }
+        $this->fileRoot = $root;
+    }
 
-		return $this;
-	}
 
-	/**
-	 * Sets the file root for templates. The file root gets prefixed to all
-	 * filenames passed to the object.
-	 *
-	 * @param string $pRoot directory name
-	 * @see Parser()
-	 * @return \Kshabazz\Sigma\Parser
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	public function setRoot( $pRoot )
-	{
-		$root = (string) $pRoot;
-		// Add a trailing slash, when missing.
-		if ( !empty($root) && DIRECTORY_SEPARATOR != \substr($root, -1) )
-		{
-			$root .= DIRECTORY_SEPARATOR;
-		}
-
-		$this->fileRoot = $root;
-
-		return $this;
-	}
+    /**
+     * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
+     *
+     * The "prepared" template contains an internal representation of template
+     * structure: essentially a serialized array of $_blocks, $_blockVariables,
+     * $_children and $_functions, may also contain $_triggers. This allows
+     * to bypass expensive calls to _buildBlockVariables() and especially
+     * _buildBlocks() when reading the "prepared" template instead of
+     * the "source" one.
+     *
+     * The files in this cache do not have any TTL and are regenerated when the
+     * source templates change.
+     *
+     * @param string $root directory name
+     *
+     * @see    HTML_Template_Sigma(), _getCached(), _writeCache()
+     * @access public
+     * @return void
+     */
+    function setCacheRoot($root)
+    {
+        if (empty($root)) {
+            $root = null;
+        } elseif (DIRECTORY_SEPARATOR != substr($root, -1)) {
+            $root .= DIRECTORY_SEPARATOR;
+        }
+        $this->_cacheRoot = $root;
+    }
 
 
     /**
