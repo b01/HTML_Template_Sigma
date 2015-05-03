@@ -1,5 +1,21 @@
 <?php namespace Kshabazz\Sigma;
 
+
+const
+	OK = 1,
+	ERROR = -1,
+	TPL_NOT_FOUND = -2,
+	BLOCK_NOT_FOUND = -3,
+	BLOCK_DUPLICATE = -4,
+	CACHE_ERROR = -5,
+	UNKNOWN_OPTION = -6,
+	PLACEHOLDER_NOT_FOUND = -10,
+	PLACEHOLDER_DUPLICATE = -11,
+	BLOCK_EXISTS = -12,
+	INVALID_CALLBACK = -13,
+	CALLBACK_SYNTAX_ERROR = -14,
+	BAD_ROOT_ERROR = -15,
+	BAD_CACHE_ROOT_ERROR = -16;
 /**
  * Class SigmaException
  *
@@ -7,21 +23,40 @@
  */
 class SigmaException extends \Exception
 {
+	/**#@+
+	 * Error codes
+	 * @see HTML_Template_Sigma::errorMessage()
+	 */
+	const
+		ERROR = -1,
+		TPL_NOT_FOUND = -2,
+		BLOCK_NOT_FOUND = -3,
+		BLOCK_DUPLICATE = -4,
+		CACHE_ERROR = -5,
+		UNKNOWN_OPTION = -6,
+		PLACEHOLDER_NOT_FOUND = -10,
+		PLACEHOLDER_DUPLICATE = -11,
+		BLOCK_EXISTS = -12,
+		INVALID_CALLBACK = -13,
+		CALLBACK_SYNTAX_ERROR = -14,
+		BAD_ROOT = -15,
+		BAD_CACHE_ROOT_ERROR = -16;
+	/**#@-*/
+
 	private $errorMessages = array(
-		ERROR                 => 'unknown error',
-		OK                    => '',
-		TPL_NOT_FOUND         => 'Cannot read the template file \'%s\'',
-		BLOCK_NOT_FOUND       => 'Cannot find block \'%s\'',
-		BLOCK_DUPLICATE       => 'The name of a block must be unique within a template. Block \'%s\' found twice.',
-		CACHE_ERROR           => 'Cannot save template file \'%s\'',
-		UNKNOWN_OPTION        => 'Unknown option \'%s\'',
-		PLACEHOLDER_NOT_FOUND => 'Variable placeholder \'%s\' not found',
-		PLACEHOLDER_DUPLICATE => 'Placeholder \'%s\' should be unique, found in multiple blocks',
-		BLOCK_EXISTS          => 'Block \'%s\' already exists',
-		INVALID_CALLBACK      => 'Callback does not exist',
-		CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
-		BAD_ROOT_ERROR        => 'Cannot set root to a directory that does not exists "%s".',
-		BAD_CACHE_ROOT_ERROR  => 'Cannot set cache root to a directory that does not exists.'
+		self::ERROR                 => 'unknown error',
+		self::TPL_NOT_FOUND         => 'Cannot read the template file \'%s\'',
+		self::BLOCK_NOT_FOUND       => 'Cannot find block \'%s\'',
+		self::BLOCK_DUPLICATE       => 'The name of a block must be unique within a template. Block \'%s\' found twice.',
+		self::CACHE_ERROR           => 'Cannot save template file \'%s\'',
+		self::UNKNOWN_OPTION        => 'Unknown option \'%s\'',
+		self::PLACEHOLDER_NOT_FOUND => 'Variable placeholder \'%s\' not found',
+		self::PLACEHOLDER_DUPLICATE => 'Placeholder \'%s\' should be unique, found in multiple blocks',
+		self::BLOCK_EXISTS          => 'Block \'%s\' already exists',
+		self::INVALID_CALLBACK      => 'Callback does not exist',
+		self::CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
+		self::BAD_ROOT              => 'Cannot set root to a directory that does not exists "%s".',
+		self::BAD_CACHE_ROOT_ERROR  => 'Cannot set cache root to a directory that does not exists.'
 	);
 
 	/**

@@ -45,6 +45,7 @@ class Placeholder
 	 *
 	 * @access private
 	 * @return void
+	 * TODO: change name to convertPlaceholderToBlock
 	 */
 	function _replacePlaceholder($parent, $placeholder, $block)
 	{
