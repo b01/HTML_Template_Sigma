@@ -279,7 +279,7 @@ class Sigma
     /**
      * Root directory for "source" templates
      * @var    string
-     * @see    HTML_Template_Sigma(), setRoot()
+     * @see    HTML_Template_Sigma(), setTemplateDirectory()
      */
     var $fileRoot = '';
 
@@ -378,7 +378,7 @@ class Sigma
      * @param string $root      root directory for templates
      * @param string $cacheRoot directory to cache "prepared" templates in
      *
-     * @see   setRoot(), setCacheRoot()
+     * @see   setTemplateDirectory(), setCacheRoot()
      */
     function __construct($root = '', $cacheRoot = '')
     {
@@ -389,7 +389,7 @@ class Sigma
         $this->blockRegExp           = '@<!--\s+BEGIN\s+(' . $this->blocknameRegExp
                                        . ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
         $this->functionRegExp        = '@' . $this->functionPrefix . '(' . $this->functionnameRegExp . ')\s*\(@sm';
-        $this->setRoot($root);
+        $this->setTemplateDirectory($root);
         $this->setCacheRoot($cacheRoot);
 
         $this->setCallbackFunction('h', array(&$this, '_htmlspecialchars'));
@@ -399,24 +399,27 @@ class Sigma
         $this->setCallbackFunction('j', array(&$this, '_jsEscape'));
     }
 
+	/**
+	 * Sets the directory where to look for templates. This directory is prefixed to all filenames passed to the
+	 * object.
+	 *
+	 * @param string $pDirectory Location to look for templates.
+	 * @see \Kshabazz\Sigma\Parser()
+	 * @return \Kshabazz\Sigma\Parser
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	public function setTemplateDirectory( $pDirectory )
+	{
+		// Add a trailing slash, when missing.
+		if ( !empty($pDirectory) && DIRECTORY_SEPARATOR != \substr($pDirectory, -1) )
+		{
+			$pDirectory .= DIRECTORY_SEPARATOR;
+		}
 
-    /**
-     * Sets the file root for templates. The file root gets prefixed to all
-     * filenames passed to the object.
-     *
-     * @param string $root directory name
-     *
-     * @see    HTML_Template_Sigma()
-     * @access public
-     * @return void
-     */
-    function setRoot($root)
-    {
-        if (('' != $root) && (DIRECTORY_SEPARATOR != substr($root, -1))) {
-            $root .= DIRECTORY_SEPARATOR;
-        }
-        $this->fileRoot = $root;
-    }
+		$this->fileRoot = $pDirectory;
+
+		return $this;
+	}
 
 
     /**

@@ -50,7 +50,7 @@ class BugTest extends \PHPUnit_Framework_TestCase
             $this->markTestSkipped('Test for a Windows-specific bug');
         }
         // realpath() on windows will return full path including drive letter
-        $this->tpl->setRoot('');
+        $this->tpl->setTemplateDirectory('');
         $this->tpl->setCacheRoot($GLOBALS['_HTML_Template_Sigma_cache_dir']);
         $result = $this->tpl->loadTemplatefile(realpath($this->templatePath) . DIRECTORY_SEPARATOR . 'loadtemplatefile.html');
         if (is_a($result, 'PEAR_Error')) {
