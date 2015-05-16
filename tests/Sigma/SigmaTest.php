@@ -24,7 +24,7 @@ class SigmaTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function test_setRoot()
 	{
-		$this->markTestIncomplete('TBD');
+		$this->markTestIncomplete('WIP: test_setRoot');
 		$parser = new Sigma('', '');
 	}
 
