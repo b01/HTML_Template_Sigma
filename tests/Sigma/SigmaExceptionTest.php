@@ -62,5 +62,33 @@ class SigmaExceptionTest extends \PHPUnit_Framework_TestCase
 
 		$this->assertContains( 'unknown error', $message );
 	}
+
+	/**
+	 * @covers ::getMessageByCode
+	 * @expectedException \Kshabazz\Sigma\SigmaException
+	 * @expectedExceptionCode -1000.2
+	 * @expectedExceptionMessage success
+	 */
+	public function test_setting_a_custom_message()
+	{
+		throw new SigmaException(
+			'-1000.1',
+			['success'],
+			'Test error message %s'
+		);
+	}
+
+	/**
+	 * @covers ::__construct
+	 * @expectedException \InvalidArgumentException
+	 */
+	public function test_set_an_invalid_custom_message()
+	{
+		throw new SigmaException(
+			'-1000.1',
+			['success'],
+			1
+		);
+	}
 }
 ?>

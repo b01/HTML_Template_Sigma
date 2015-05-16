@@ -1,6 +1,7 @@
 <?php namespace Kshabazz\Sigma\Tests;
 
 use Kshabazz\Sigma\Sigma;
+use const Kshabazz\Sigma\Tests\FIXTURES_DIR;
 
 /**
  * Class SigmaTest
@@ -28,14 +29,61 @@ class SigmaTest extends \PHPUnit_Framework_TestCase
 		$parser = new Sigma('', '');
 	}
 
-//	/**
-//	 * @covers ::setCacheRoot
-//	 * @expectedException \Kshabazz\Sigma\SigmaException
-//	 * @expectedExceptionMessage Cannot set cache root to a directory that does not exists
-//	 */
-//	public function test_bad_setCacheRoot()
-//	{
-//		$parser = new Sigma( \FIXTURES_PATH,  \FIXTURES_PATH );
-//		$parser->setCacheRoot( 'does_not_exists' );
-//	}
+	/**
+	 * @covers ::setCacheRoot
+	 * @expectedException \Kshabazz\Sigma\SigmaException
+	 * @expectedExceptionMessage Cannot set cache root to a directory that does not exists
+	 */
+	public function test_bad_setCacheRoot()
+	{
+		$parser = new Sigma( FIXTURES_DIR,  FIXTURES_DIR );
+		$parser->setCacheRoot( 'does_not_exists' );
+	}
+
+	/**
+	 * @covers ::setCacheRoot
+	 */
+	public function test_turning_cache_off_with_null_string()
+	{
+		$cacheDir = FIXTURES_DIR . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'cache';
+		$parser = new Sigma( FIXTURES_DIR, $cacheDir );
+		// Turn off caching empty string.
+		$parser->setCacheRoot( '' );
+		// Parse a file
+		$parser->loadTemplateFile( 'placeholder.tpl' );
+		$parser->setVariable('TEST_CACHE', 'testing cache is turned on.' );
+
+		$this->assertFileNotExists( $cacheDir . DIRECTORY_SEPARATOR . 'placeholder.tpl.it' );
+	}
+
+	/**
+	 * @covers ::setCacheRoot
+	 */
+	public function test_turning_cache_off_with_null()
+	{
+		$cacheDir = FIXTURES_DIR . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'cache';
+		$parser = new Sigma( FIXTURES_DIR, $cacheDir );
+		// Turn off caching with NULL.
+		$parser->setCacheRoot( NULL );
+		// Parse a file
+		$parser->loadTemplateFile( 'placeholder.tpl' );
+		$parser->setVariable('TEST_CACHE', 'testing cache is turned on.' );
+
+		$this->assertFileNotExists( $cacheDir . DIRECTORY_SEPARATOR . 'placeholder.tpl.it' );
+	}
+
+	/**
+	 * @covers ::setCacheRoot
+	 * @expectedException \Kshabazz\Sigma\SigmaException
+	 * @expectedExceptionMessage Argument passed to Kshabazz\Sigma\Sigma::setCacheRoot() was invalid
+	 * @expectedExceptionCode -17
+	 */
+	public function test_setting_cache_with_something_other_than_a_string_or_null()
+	{
+		$cacheDir = FIXTURES_DIR . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'cache';
+		$parser = new Sigma( FIXTURES_DIR, $cacheDir );
+		// Turn off caching with NULL.
+		$parser->setCacheRoot( 313 );
+	}
 }
+?>
