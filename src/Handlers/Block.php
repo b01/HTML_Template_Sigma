@@ -7,7 +7,7 @@ use const \Kshabazz\Sigma\OK;
 /**
  * Class Block
  *
- * @package Kshabazz\Sigma\Handlers
+ * @package \Kshabazz\Sigma\Handlers
  */
 class Block
 {
@@ -52,10 +52,26 @@ class Block
 	private $_children;
 
 	/**
+	 * Last character of a variable placeholder ( {VARIABLE_}_ )
+	 *
+	 * @var string
+	 * @see $openingDelimiter, $blocknameRegExp, $variablenameRegExp
+	 */
+	public $closingDelimiter;
+
+	/**
 	 * RegExp used to find (and remove) comments in the template
 	 * @var string
 	 */
 	private $commentRegExp;
+
+	/**
+	 * List of blocks which should not be shown even if not "empty"
+	 *
+	 * @var array
+	 * @see hideBlock(), $removeEmptyBlocks
+	 */
+	private $_hiddenBlocks = [];
 
 	/**
 	 * First character of a variable placeholder ( _{_VARIABLE} ).
@@ -66,12 +82,20 @@ class Block
 	public $openingDelimiter;
 
 	/**
-	 * Last character of a variable placeholder ( {VARIABLE_}_ )
+	 * Content of parsed blocks
 	 *
-	 * @var string
-	 * @see $openingDelimiter, $blocknameRegExp, $variablenameRegExp
+	 * @var array
+	 * @see get(), parse()
 	 */
-	public $closingDelimiter ;
+	private $_parsedBlocks = [];
+
+	/**
+	 * List of blocks to preserve even if they are "empty"
+	 *
+	 * @var array
+	 * @see touchBlock(), $removeEmptyBlocks
+	 */
+	private $_touchedBlocks = [];
 
 	/**
 	 * Constructor
@@ -93,13 +117,32 @@ class Block
 			. ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
 		$this->commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
 
-		$template = '<!-- BEGIN __global__ -->'
-			. \preg_replace( $this->commentRegExp, '', $pTemplate )
-			. '<!-- END __global__ -->';
+		// Remove all HTML comments.
+		$template = \preg_replace( $this->commentRegExp, '', $pTemplate );
+		// Wrap in global block.
+		$template = \sprintf( '<!-- BEGIN __global__ -->%s<!-- END __global__ -->', $template );
 
 		$this->buildBlocks( $template, $this->openingDelimiter, $this->closingDelimiter );
-		// Parse variables in each block.
-//		$this->_blockVariables();
+	}
+
+	/**
+	 * Get blocks parsed from template.
+	 *
+	 * @return array
+	 */
+	public function getBlocks()
+	{
+		return $this->_blocks;
+	}
+
+	/**
+	 * Get array that indicates if a block has children.
+	 *
+	 * @return array
+	 */
+	public function getChildrenData()
+	{
+		return $this->_children;
 	}
 
 	/**
@@ -128,17 +171,88 @@ class Block
 		{
 			return isset( $this->_children[$parent] )? \array_keys( $this->_children[$parent] ): [];
 		}
-		else
-		{
-			$ret = ['name' => $parent];
-			if (!empty($this->_children[$parent])) {
-				$ret['children'] = [];
-				foreach (array_keys($this->_children[$parent]) as $child) {
-					$ret['children'][] = $this->getBlockList($child, true);
-				}
+
+		$ret = ['name' => $parent];
+		if (!empty($this->_children[$parent])) {
+			$ret['children'] = [];
+			foreach ( \array_keys($this->_children[$parent]) as $child )
+			{
+				$ret['children'][] = $this->getBlockList( $child, true );
 			}
-			return $ret;
 		}
+
+		return $ret;
+	}
+
+	/**
+	 * Get hidden blocks
+	 *
+	 * @return array
+	 */
+	public function getHidden()
+	{
+		return $this->_hiddenBlocks;
+	}
+
+	/**
+	 * Get touched blocks.
+	 *
+	 * @return array
+	 */
+	public function getTouched()
+	{
+		return $this->_touchedBlocks;
+	}
+
+	/**
+	 * Get a list of parsed blocks.
+	 *
+	 * @return array
+	 */
+	public function getParsed()
+	{
+		return $this->_parsedBlocks;
+	}
+
+	/**
+	 * Replaces an existing block with new content.
+	 *
+	 * This function will replace a block of the template and all blocks
+	 * contained in it and add a new block instead. This means you can
+	 * dynamically change your template.
+	 *
+	 * Sigma analyses the way you've nested blocks and knows which block
+	 * belongs into another block. This nesting information helps to make the
+	 * API short and simple. Replacing blocks does not only mean that Sigma
+	 * has to update the nesting information (relatively time consuming task)
+	 * but you have to make sure that you do not get confused due to the
+	 * template change yourself.
+	 *
+	 * @param string  $pBlock       name of a block to replace
+	 * @param string  $pTemplate    new content
+	 * @param boolean $pKeepContent true if the parsed contents of the block should be kept
+	 *
+	 * @access public
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 * @see    replaceBlockfile(), addBlock()
+	 */
+	function replaceBlock( $pBlock, $pTemplate, $pKeepContent = FALSE )
+	{
+		if ( !isset($this->_blocks[$pBlock]) )
+		{
+			return new SigmaException( SigmaException::BLOCK_NOT_FOUND, [$pBlock] );
+		}
+		$this->removeBlockData( $pBlock, $pKeepContent );
+
+		// Remove all HTML comments.
+		$content = \preg_replace( $this->commentRegExp, '', $pTemplate );
+		// Format the content as a block.
+		$content = \sprintf( "<!-- BEGIN {$pBlock} -->%s<!-- END {$pBlock} -->", $content );
+		// Add the block.
+		$this->buildBlocks( $content );
+
+		return TRUE;
 	}
 
 	/**
@@ -149,7 +263,7 @@ class Block
 	 * @throws \Kshabazz\Sigma\SigmaException
 	 * @see $_blocks
 	 */
-	private function buildBlocks( $pTemplate )
+	public function buildBlocks( $pTemplate )
 	{
 		$blocks = [];
 		// When no blocks are found, return immediately.
@@ -175,16 +289,66 @@ class Block
 
 			foreach ($inner as $name => $v)
 			{
-				$pattern = sprintf( '@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name );
+				$pattern = \sprintf( '@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name );
 				$replacement = $this->openingDelimiter . '__' . $name . '__' . $this->closingDelimiter;
-				$this->_children[ $blockname ][ $name ] = TRUE;
-				$this->_blocks[ $blockname ] = preg_replace(
-					$pattern, $replacement, $this->_blocks[ $blockname ]
+				$this->_children[$blockname][$name] = TRUE;
+				$this->_blocks[$blockname] = \preg_replace(
+					$pattern, $replacement, $this->_blocks[$blockname]
 				);
 			}
 		}
 
 		return $blocks;
+	}
+
+	/**
+	 * Load blocks from cache file.
+	 *
+	 * @param array $pCache
+	 */
+	public function loadFromCache( array $pCache )
+	{
+		$this->_blocks = $pCache['blocks'];
+		$this->_children = $pCache['children'];
+	}
+
+	/**
+	 * Recursively removes all data belonging to a block
+	 *
+	 * @param string $block block name
+	 * @param boolean $keepContent true if the parsed contents of the block should be kept
+	 *
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 * @see replaceBlock(), replaceBlockfile()
+	 */
+	private function removeBlockData( $block, $keepContent = FALSE )
+	{
+		if ( !\array_key_exists($block, $this->_blocks) )
+		{
+			throw new SigmaException( SigmaException::BLOCK_NOT_FOUND, [$block] );
+		}
+
+		// Remove any children.
+		if ( !empty($this->_children[$block]) )
+		{
+			foreach ( \array_keys($this->_children[$block]) as $child )
+			{
+				$this->removeBlockData($child, FALSE);
+			}
+			unset( $this->_children[$block] );
+		}
+
+		unset( $this->_blocks[$block] );
+		unset( $this->_hiddenBlocks[$block] );
+		unset( $this->_touchedBlocks[$block] );
+
+		if ( !$keepContent )
+		{
+			unset( $this->_parsedBlocks[$block] );
+		}
+
+		return TRUE;
 	}
 //
 //	/**
@@ -271,49 +435,6 @@ class Block
 //		} else {
 //			return $this->_writeCache($filename, $block);
 //		}
-//	}
-//
-//	/**
-//	 * Replaces an existing block with new content.
-//	 *
-//	 * This function will replace a block of the template and all blocks
-//	 * contained in it and add a new block instead. This means you can
-//	 * dynamically change your template.
-//	 *
-//	 * Sigma analyses the way you've nested blocks and knows which block
-//	 * belongs into another block. This nesting information helps to make the
-//	 * API short and simple. Replacing blocks does not only mean that Sigma
-//	 * has to update the nesting information (relatively time consuming task)
-//	 * but you have to make sure that you do not get confused due to the
-//	 * template change yourself.
-//	 *
-//	 * @param string  $block       name of a block to replace
-//	 * @param string  $template    new content
-//	 * @param boolean $keepContent true if the parsed contents of the block should be kept
-//	 *
-//	 * @access public
-//	 * @return mixed SIGMA_OK on success, error object on failure
-//	 * @throws PEAR_Error
-//	 * @see    replaceBlockfile(), addBlock()
-//	 */
-//	function replaceBlock($block, $template, $keepContent = false)
-//	{
-//		if (!isset($this->_blocks[$block])) {
-//			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
-//		}
-//		// should not throw a error as we already checked for block existance
-//		$this->_removeBlockData($block, $keepContent);
-//
-//		$list = $this->_buildBlocks(
-//			"<!-- BEGIN $block -->" .
-//			preg_replace($this->commentRegExp, '', $template) .
-//			"<!-- END $block -->"
-//		);
-//		if (is_a($list, 'PEAR_Error')) {
-//			return $list;
-//		}
-//		// renew the variables list
-//		return $this->_buildBlockVariables($block);
 //	}
 //
 //	/**
@@ -505,35 +626,5 @@ class Block
 //		return $parents;
 //	}
 //
-//	/**
-//	 * Recursively removes all data belonging to a block
-//	 *
-//	 * @param string  $block       block name
-//	 * @param boolean $keepContent true if the parsed contents of the block should be kept
-//	 *
-//	 * @return mixed SIGMA_OK on success, error object on failure
-//	 * @see    replaceBlock(), replaceBlockfile()
-//	 */
-//	private function _removeBlockData($block, $keepContent = false)
-//	{
-//		if (!isset($this->_blocks[$block])) {
-//			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
-//		}
-//		if (!empty($this->_children[$block])) {
-//			foreach (array_keys($this->_children[$block]) as $child) {
-//				$this->_removeBlockData($child, false);
-//			}
-//			unset($this->_children[$block]);
-//		}
-//		unset($this->_blocks[$block]);
-//		unset($this->_blockVariables[$block]);
-//		unset($this->_hiddenBlocks[$block]);
-//		unset($this->_touchedBlocks[$block]);
-//		unset($this->_functions[$block]);
-//		if (!$keepContent) {
-//			unset($this->_parsedBlocks[$block]);
-//		}
-//		return SIGMA_OK;
-//	}
 }
 ?>

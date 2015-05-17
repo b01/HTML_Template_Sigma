@@ -23,6 +23,8 @@
  * Error codes
  * @see HTML_Template_Sigma::errorMessage()
  */
+use Kshabazz\Sigma\Handlers\Block;
+
 define('SIGMA_OK',                         1);
 define('SIGMA_ERROR',                     -1);
 define('SIGMA_TPL_NOT_FOUND',             -2);
@@ -208,6 +210,26 @@ class Sigma
 		return $this;
 	}
 
+	/**
+	 * @param Block $pBlocks
+	 * @param string $pBlock
+	 * @param string $pContent Any content that can be in a template.
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	private function composerBlocks( Block $pBlocks, $pBlock, $pContent )
+	{
+		// Remove all HTML comments.
+		$content = \preg_replace( $this->commentRegExp, '', $pContent );
+		// Format the content as a block.
+		$content = \sprintf( "<!-- BEGIN {$pBlock} -->%s<!-- END {$pBlock} -->", $content );
+		// Add the block.
+		$pBlocks->buildBlocks( $content );
+
+		// Update blocks.
+		$this->_blocks = $pBlocks->getBlocks();
+		$this->_children = $pBlocks->getChildrenData();
+	}
+
 // Everything below this line has not been refactored.
 
 
@@ -293,7 +315,7 @@ class Sigma
      * @see      _buildBlocks()
      * @access   private
      */
-    var $_blocks = array();
+    var $_blocks = [];
 
     /**
      * Content of parsed blocks
@@ -301,7 +323,7 @@ class Sigma
      * @see      get(), parse()
      * @access   private
      */
-    var $_parsedBlocks = array();
+    var $_parsedBlocks = [];
 
     /**
      * Variable names that appear in the block
@@ -309,7 +331,7 @@ class Sigma
      * @see      _buildBlockVariables()
      * @access   private
      */
-    var $_blockVariables = array();
+    var $_blockVariables = [];
 
     /**
      * Inner blocks inside the block
@@ -317,7 +339,7 @@ class Sigma
      * @see      _buildBlocks()
      * @access   private
      */
-    var $_children = array();
+    var $_children = [];
 
     /**
      * List of blocks to preserve even if they are "empty"
@@ -325,7 +347,7 @@ class Sigma
      * @see      touchBlock(), $removeEmptyBlocks
      * @access   private
      */
-    var $_touchedBlocks = array();
+    var $_touchedBlocks = [];
 
     /**
      * List of blocks which should not be shown even if not "empty"
@@ -333,7 +355,7 @@ class Sigma
      * @see      hideBlock(), $removeEmptyBlocks
      * @access   private
      */
-    var $_hiddenBlocks = array();
+    var $_hiddenBlocks = [];
 
     /**
      * Variables for substitution.
@@ -345,7 +367,7 @@ class Sigma
      * @see      setVariable()
      * @access   private
      */
-    var $_variables = array();
+    var $_variables = [];
 
     /**
      * Global variables for substitution
@@ -359,7 +381,7 @@ class Sigma
      * @see      setVariable(), setGlobalVariable()
      * @access   private
      */
-    var $_globalVariables = array();
+    var $_globalVariables = [];
 
     /**
      * Root directory for "source" templates
@@ -388,11 +410,11 @@ class Sigma
      * @var      array
      * @access   private
      */
-    var $_options = array(
+    var $_options = [
         'preserve_data' => false,
         'trim_on_save'  => true,
         'charset'       => 'iso-8859-1'
-    );
+    ];
 
     /**
      * Function name prefix used when searching for function calls in the template
@@ -418,14 +440,14 @@ class Sigma
      * @var    array
      * @access private
      */
-    var $_functions = array();
+    var $_functions = [];
 
     /**
      * List of callback functions specified by the user
      * @var    array
      * @access private
      */
-    var $_callback = array();
+    var $_callback = [];
 
     /**
      * RegExp used to find file inclusion calls in the template
@@ -444,7 +466,7 @@ class Sigma
      * @var    array
      * @access private
      */
-    var $_triggers = array();
+    var $_triggers = [];
 
     /**
      * Name of the block to use in _makeTrigger() (see bug #20068)
@@ -525,7 +547,7 @@ class Sigma
     {
         static $errorMessages;
         if (!isset($errorMessages)) {
-            $errorMessages = array(
+            $errorMessages = [
                 SIGMA_ERROR                 => 'unknown error',
                 SIGMA_OK                    => '',
                 SIGMA_TPL_NOT_FOUND         => 'Cannot read the template file \'%s\'',
@@ -539,7 +561,7 @@ class Sigma
                 SIGMA_BLOCK_EXISTS          => 'Block \'%s\' already exists',
                 SIGMA_INVALID_CALLBACK      => 'Callback does not exist',
                 SIGMA_CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s'
-            );
+            ];
         }
 
         if (is_a($code, 'PEAR_Error')) {
@@ -637,7 +659,7 @@ class Sigma
         $outer = $this->_blocks[$block];
 
         if (!$flagRecursion) {
-            $vars = array();
+            $vars = [];
         }
         // block is not empty if its local var is substituted
         $empty = true;
@@ -686,7 +708,7 @@ class Sigma
             if (0 != count($vars) && (!$flagRecursion || !empty($this->_functions[$block]))) {
                 $varKeys     = array_keys($vars);
                 $varValues   = $this->_options['preserve_data']
-                               ? array_map(array(&$this, '_preserveOpeningDelimiter'), array_values($vars))
+                               ? array_map([&$this, '_preserveOpeningDelimiter'], array_values($vars))
                                : array_values($vars);
             }
 
@@ -700,7 +722,7 @@ class Sigma
                         $placeholder = $this->openingDelimiter . '__function_' . $id . '__' . $this->closingDelimiter;
                         // do not waste time calling function more than once
                         if (!isset($vars[$placeholder])) {
-                            $args         = array();
+                            $args         = [];
                             $preserveArgs = !empty($this->_callback[$data['name']]['preserveArgs']);
                             foreach ($data['args'] as $arg) {
                                 $args[] = (empty($varKeys) || $preserveArgs)
@@ -916,28 +938,28 @@ class Sigma
      * @return mixed SIGMA_OK on success, error object on failure
      * @see    loadTemplatefile()
      */
-    function setTemplate($template, $removeUnknownVariables = true, $removeEmptyBlocks = true, $cacheFilename = null)
+    function setTemplate( $template, $removeUnknownVariables = true, $removeEmptyBlocks = true, $cacheFilename = null )
     {
-		// Parse the template for include statements and replace them with triggers.
+		// Parse the template for include statements and replace them with triggers
+		// to be executed later.
 	    $template = preg_replace_callback(
 			$this->includeRegExp,
-			[&$this, '_makeTrigger'],
+			[ &$this, '_makeTrigger' ],
 			$template
 		);
 
-	    $this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
-        $list = $this->_buildBlocks(
-            '<!-- BEGIN __global__ -->' .
-            preg_replace($this->commentRegExp, '', $template) .
-            '<!-- END __global__ -->'
-        );
-        if (is_a($list, 'PEAR_Error')) {
-            return $list;
-        }
-	    if (SIGMA_OK !== ($res = $this->_buildBlockVariables())) {
-		    return $res;
-	    }
-	    return $this->_writeCache($cacheFilename, '__global__');
+		$this->_resetTemplate( $removeUnknownVariables, $removeEmptyBlocks );
+
+		$this->blocks = new Block( $template );
+		$this->_blocks = $this->blocks->getBlocks();
+		$this->_children = $this->blocks->getChildrenData();
+
+		if ( SIGMA_OK !== ($res = $this->_buildBlockVariables()) )
+		{
+			return $res;
+		}
+
+		return $this->_writeCache( $cacheFilename, '__global__' );
     }
 
 
@@ -966,7 +988,7 @@ class Sigma
         if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
             return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
         }
-        $this->_triggers     = array();
+        $this->_triggers     = [];
         $this->_triggerBlock = '__global__';
         if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks, $filename))) {
             return $res;
@@ -986,39 +1008,40 @@ class Sigma
      * <!-- END blockname -->, if it does the error will be thrown.
      *
      * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
-     * @param string $block       name of the block to be added
-     * @param string $template    content of the block
+     * @param string $block name of the block to be added
+     * @param string $pContent content of the block
      *
      * @access public
      * @return mixed SIGMA_OK on success, error object on failure
-     * @throws PEAR_Error
-     * @see    addBlockfile()
+     * @throws SigmaException
+     * @see addBlockfile()
      */
-    function addBlock($placeholder, $block, $template)
+    function addBlock( $placeholder, $block, $pContent )
     {
-        if (isset($this->_blocks[$block])) {
-            return new \Exception($this->errorMessage(SIGMA_BLOCK_EXISTS, $block), SIGMA_BLOCK_EXISTS);
-        }
-        $parents = $this->_findParentBlocks($placeholder);
-        if (0 == count($parents)) {
-            return new \Exception(
-                $this->errorMessage(SIGMA_PLACEHOLDER_NOT_FOUND, $placeholder), SIGMA_PLACEHOLDER_NOT_FOUND
-            );
+		// Don't replace a block that already exists, there is a separate
+		// method for that.
+		if ( isset($this->_blocks[$block]) )
+		{
+			return new SigmaException( SigmaException::BLOCK_EXISTS, [$block] );
+		}
 
-        } elseif (count($parents) > 1) {
-            return new \Exception(
-                $this->errorMessage(SIGMA_PLACEHOLDER_DUPLICATE, $placeholder), SIGMA_PLACEHOLDER_DUPLICATE
-            );
-        }
+		$parents = $this->_findParentBlocks($placeholder);
+		if ( \count($parents) === 0 )
+		{
+			return new SigmaException( SigmaException::PLACEHOLDER_NOT_FOUND, [$placeholder] );
+		}
+		// I guess this occurs when you use the same placeholder name in
+		// multiple blocks, in the same template.
+		// TODO: add unit test for this.
+		else if ( \count($parents) > 1 )
+		{
+			return new SigmaException( SigmaException::PLACEHOLDER_DUPLICATE, [$placeholder] );
+		}
 
-        $list = $this->_buildBlocks(
-            "<!-- BEGIN $block -->" .
-            preg_replace($this->commentRegExp, '', $template) .
-            "<!-- END $block -->"
-        );
-        if (is_a($list, 'PEAR_Error')) {
-            return $list;
-        }
+		$this->composerBlocks( $this->blocks, $block, $pContent );
+
+
+		// Find the parent block of the placeholder so that it bc
         $this->_replacePlaceholder($parents[0], $placeholder, $block);
         return $this->_buildBlockVariables($block);
     }
@@ -1045,8 +1068,8 @@ class Sigma
         if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
             return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
         }
-        list($oldTriggerBlock, $this->_triggerBlock) = array($this->_triggerBlock, $block);
-        $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
+        list($oldTriggerBlock, $this->_triggerBlock) = [$this->_triggerBlock, $block];
+        $template = preg_replace_callback($this->includeRegExp, [&$this, '_makeTrigger'], $template);
         $this->_triggerBlock = $oldTriggerBlock;
         if (SIGMA_OK !== ($res = $this->addBlock($placeholder, $block, $template))) {
             return $res;
@@ -1081,20 +1104,20 @@ class Sigma
      */
     function replaceBlock($block, $template, $keepContent = false)
     {
-        if (!isset($this->_blocks[$block])) {
-            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
-        }
-        // should not throw a error as we already checked for block existance
-        $this->_removeBlockData($block, $keepContent);
+		$this->blocks->replaceBlock( $block, $template, $keepContent );
 
-        $list = $this->_buildBlocks(
-            "<!-- BEGIN $block -->" .
-            preg_replace($this->commentRegExp, '', $template) .
-            "<!-- END $block -->"
-        );
-        if (is_a($list, 'PEAR_Error')) {
-            return $list;
-        }
+		unset( $this->_blockVariables[$block] );
+		unset( $this->_functions[$block] );
+		if (!$keepContent) {
+			unset($this->_parsedBlocks[$block]);
+		}
+
+		// Update blocks.
+		$this->_blocks = $this->blocks->getBlocks();
+		$this->_children = $this->blocks->getChildrenData();
+		$this->_hiddenBlocks = $this->blocks->getHidden();
+		$this->_touchedBlocks = $this->blocks->getTouched();
+//		$this->_parsedBlocks = $this->blocks->getParsed();
         // renew the variables list
         return $this->_buildBlockVariables($block);
     }
@@ -1125,8 +1148,8 @@ class Sigma
         if (false === ($template = @file_get_contents($this->fileRoot . $filename))) {
             return new \Exception($this->errorMessage(SIGMA_TPL_NOT_FOUND, $filename), SIGMA_TPL_NOT_FOUND);
         }
-        list($oldTriggerBlock, $this->_triggerBlock) = array($this->_triggerBlock, $block);
-        $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
+        list($oldTriggerBlock, $this->_triggerBlock) = [$this->_triggerBlock, $block];
+        $template = preg_replace_callback($this->includeRegExp, [&$this, '_makeTrigger'], $template);
         $this->_triggerBlock = $oldTriggerBlock;
         if (SIGMA_OK !== ($res = $this->replaceBlock($block, $template, $keepContent))) {
             return $res;
@@ -1227,10 +1250,10 @@ class Sigma
         if (!is_callable($callback)) {
             return new \Exception($this->errorMessage(SIGMA_INVALID_CALLBACK), SIGMA_INVALID_CALLBACK);
         }
-        $this->_callback[$tplFunction] = array(
+        $this->_callback[$tplFunction] = [
             'data'         => $callback,
             'preserveArgs' => $preserveArgs
-        );
+        ];
         return SIGMA_OK;
     } // end func setCallbackFunction
 
@@ -1256,11 +1279,11 @@ class Sigma
             return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $parent), SIGMA_BLOCK_NOT_FOUND);
         }
         if (!$recursive) {
-            return isset($this->_children[$parent])? array_keys($this->_children[$parent]): array();
+            return isset($this->_children[$parent])? array_keys($this->_children[$parent]): [];
         } else {
-            $ret = array('name' => $parent);
+            $ret = ['name' => $parent];
             if (!empty($this->_children[$parent])) {
-                $ret['children'] = array();
+                $ret['children'] = [];
                 foreach (array_keys($this->_children[$parent]) as $child) {
                     $ret['children'][] = $this->getBlockList($child, true);
                 }
@@ -1286,7 +1309,7 @@ class Sigma
         if (!isset($this->_blocks[$block])) {
             return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
-        $ret = array();
+        $ret = [];
         foreach ($this->_blockVariables[$block] as $var => $v) {
             if ('__' != substr($var, 0, 2) || '__' != substr($var, -2)) {
                 $ret[] = $var;
@@ -1310,7 +1333,7 @@ class Sigma
      */
     function clearVariables()
     {
-        $this->_variables = array();
+        $this->_variables = [];
     }
 
 
@@ -1331,7 +1354,7 @@ class Sigma
       */
     function _flattenVariables($name, $array)
     {
-        $ret = array();
+        $ret = [];
         foreach ($array as $key => $value) {
             if (is_array($value)) {
                 $ret = array_merge($ret, $this->_flattenVariables($name . '.' . $key, $value));
@@ -1356,16 +1379,16 @@ class Sigma
      */
     function _buildBlockVariables($block = '__global__')
     {
-        $this->_blockVariables[$block] = array();
-        $this->_functions[$block]      = array();
+        $this->_blockVariables[$block] = [];
+        $this->_functions[$block]      = [];
         preg_match_all($this->variablesRegExp, $this->_blocks[$block], $regs, PREG_SET_ORDER);
         foreach ($regs as $match) {
             $this->_blockVariables[$block][$match[1]] = true;
             if (!empty($match[3])) {
-                $funcData = array(
+                $funcData = [
                     'name' => $match[3],
-                    'args' => array($this->openingDelimiter . $match[1] . $this->closingDelimiter)
-                );
+                    'args' => [$this->openingDelimiter . $match[1] . $this->closingDelimiter]
+                ];
                 $funcId   = substr(md5(serialize($funcData)), 0, 10);
 
                 // update block info
@@ -1391,49 +1414,6 @@ class Sigma
         return SIGMA_OK;
     }
 
-
-    /**
-     * Recusively builds a list of all blocks within the template.
-     *
-     * @param string $string template to be scanned
-     *
-     * @access private
-     * @return mixed array of block names on success or error object on failure
-     * @throws PEAR_Error
-     * @see    $_blocks
-     */
-    function _buildBlocks($string)
-    {
-        $blocks = array();
-        if (preg_match_all($this->blockRegExp, $string, $regs, PREG_SET_ORDER)) {
-            foreach ($regs as $match) {
-                $blockname    = $match[1];
-                $blockcontent = $match[2];
-                if (isset($this->_blocks[$blockname]) || isset($blocks[$blockname])) {
-                    return new \Exception(
-                        $this->errorMessage(SIGMA_BLOCK_DUPLICATE, $blockname), SIGMA_BLOCK_DUPLICATE
-                    );
-                }
-                $this->_blocks[$blockname] = $blockcontent;
-                $blocks[$blockname] = true;
-                $inner              = $this->_buildBlocks($blockcontent);
-                if (is_a($inner, 'PEAR_Error')) {
-                    return $inner;
-                }
-                foreach ($inner as $name => $v) {
-                    $pattern     = sprintf('@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name);
-                    $replacement = $this->openingDelimiter.'__'.$name.'__'.$this->closingDelimiter;
-                    $this->_children[$blockname][$name] = true;
-                    $this->_blocks[$blockname]          = preg_replace(
-                        $pattern, $replacement, $this->_blocks[$blockname]
-                    );
-                }
-            }
-        }
-        return $blocks;
-    }
-
-
     /**
      * Resets the object's properties, used before processing a new template
      *
@@ -1449,12 +1429,12 @@ class Sigma
         $this->removeUnknownVariables = $removeUnknownVariables;
         $this->removeEmptyBlocks      = $removeEmptyBlocks;
         $this->currentBlock           = '__global__';
-        $this->_variables             = array();
-        $this->_blocks                = array();
-        $this->_children              = array();
-        $this->_parsedBlocks          = array();
-        $this->_touchedBlocks         = array();
-        $this->_functions             = array();
+        $this->_variables             = [];
+        $this->_blocks                = [];
+        $this->_children              = [];
+        $this->_parsedBlocks          = [];
+        $this->_touchedBlocks         = [];
+        $this->_functions             = [];
         $this->flagGlobalParsed       = false;
     } // _resetTemplate
 
@@ -1528,6 +1508,8 @@ class Sigma
                 $cache['children']['__global__'], $cache['functions']['__global__']
             );
         }
+		$this->blocks = new Block( NULL );
+		$this->blocks->loadFromCache( $cache );
         $this->_blocks         = array_merge($this->_blocks, $cache['blocks']);
         $this->_blockVariables = array_merge($this->_blockVariables, $cache['variables']);
         $this->_children       = array_merge($this->_children, $cache['children']);
@@ -1556,7 +1538,7 @@ class Sigma
     function _cachedName($filename)
     {
         if (OS_WINDOWS) {
-            $filename = str_replace(array('/', '\\', ':'), array('__', '__', ''), $filename);
+            $filename = str_replace(['/', '\\', ':'], ['__', '__', ''], $filename);
         } else {
             $filename = str_replace('/', '__', $filename);
         }
@@ -1580,12 +1562,12 @@ class Sigma
     {
         // do not save anything if no cache dir, but do pull triggers
         if (null !== $this->_cacheRoot && !empty($filename)) {
-            $cache = array(
-                'blocks'    => array(),
-                'variables' => array(),
-                'children'  => array(),
-                'functions' => array()
-            );
+            $cache = [
+                'blocks'    => [],
+                'variables' => [],
+                'children'  => [],
+                'functions' => []
+            ];
             $cachedName = $this->_cachedName($filename);
             $this->_buildCache($cache, $block);
             if ('__global__' != $block) {
@@ -1683,15 +1665,15 @@ class Sigma
             $cache['blocks'][$block] = $this->_blocks[$block];
         } else {
             $cache['blocks'][$block] = preg_replace(
-                array('/^\\s+/m', '/\\s+$/m', '/(\\r?\\n)+/'),
-                array('', '', "\n"),
+                ['/^\\s+/m', '/\\s+$/m', '/(\\r?\\n)+/'],
+                ['', '', "\n"],
                 $this->_blocks[$block]
             );
         }
         $cache['variables'][$block] = $this->_blockVariables[$block];
-        $cache['functions'][$block] = isset($this->_functions[$block])? $this->_functions[$block]: array();
+        $cache['functions'][$block] = isset($this->_functions[$block])? $this->_functions[$block]: [];
         if (!isset($this->_children[$block])) {
-            $cache['children'][$block] = array();
+            $cache['children'][$block] = [];
         } else {
             $cache['children'][$block] = $this->_children[$block];
             foreach (array_keys($this->_children[$block]) as $child) {
@@ -1745,7 +1727,7 @@ class Sigma
      */
     function _findParentBlocks($variable)
     {
-        $parents = array();
+        $parents = [];
         foreach ($this->_blockVariables as $blockname => $varnames) {
             if (!empty($varnames[$variable])) {
                 $parents[] = $blockname;
@@ -1866,10 +1848,10 @@ class Sigma
             $state    = 1;
             $arg      = '';
             $quote    = '';
-            $funcData = array(
+            $funcData = [
                 'name' => $regs[1],
-                'args' => array()
-            );
+                'args' => []
+            ];
             for ($i = 0, $len = strlen($template); $i < $len; $i++) {
                 $char = $template[$i];
                 switch ($state) {
@@ -2016,10 +1998,10 @@ class Sigma
     {
         return strtr(
             $value,
-            array(
+            [
                 "\r" => '\r',    "'"  => "\\x27", "\n" => '\n',
                 '"'  => '\\x22', "\t" => '\t',    '\\' => '\\\\'
-            )
+            ]
         );
     }
 
