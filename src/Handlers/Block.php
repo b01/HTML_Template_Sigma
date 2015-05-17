@@ -74,28 +74,30 @@ class Block
 	public $closingDelimiter ;
 
 	/**
-	 * @param string $template\
+	 * Constructor
+	 *
+	 * @param string $pTemplate
+	 * @param string $pOpeningDelimiter
+	 * @param string $pClosingDelimiter
 	 */
-	public function __construct( $template, $openingDelimiter, $closingDelimiter )
+	public function __construct( $pTemplate, $pOpeningDelimiter = '{', $pClosingDelimiter = '}' )
 	{
 		$this->_blocks = [];
 		$this->_blockVariables = [];
 		$this->_children = [];
-		$this->openingDelimiter = $openingDelimiter;
-		$this->closingDelimiter = $closingDelimiter;
+		$this->openingDelimiter = $pOpeningDelimiter;
+		$this->closingDelimiter = $pClosingDelimiter;
 		$this->blocknameRegExp  = '[0-9A-Za-z_-]+';
 		$this->blockRegExp = '@<!--\s+BEGIN\s+('
 			. $this->blocknameRegExp
 			. ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
 		$this->commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
 
-		// Parse out blocks.
-		$this->buildBlocks(
-			'<!-- BEGIN __global__ -->'
-			. \preg_replace( $this->commentRegExp, '', $template )
-			. '<!-- END __global__ -->'
-		);
+		$template = '<!-- BEGIN __global__ -->'
+			. \preg_replace( $this->commentRegExp, '', $pTemplate )
+			. '<!-- END __global__ -->';
 
+		$this->buildBlocks( $template, $this->openingDelimiter, $this->closingDelimiter );
 		// Parse variables in each block.
 //		$this->_blockVariables();
 	}
@@ -128,9 +130,9 @@ class Block
 		}
 		else
 		{
-			$ret = array('name' => $parent);
+			$ret = ['name' => $parent];
 			if (!empty($this->_children[$parent])) {
-				$ret['children'] = array();
+				$ret['children'] = [];
 				foreach (array_keys($this->_children[$parent]) as $child) {
 					$ret['children'][] = $this->getBlockList($child, true);
 				}
@@ -142,16 +144,16 @@ class Block
 	/**
 	 * Recursively builds a list of all blocks within the template.
 	 *
-	 * @param string $string template to be scanned
+	 * @param string $pTemplate template to be scanned.
 	 * @return mixed array of block names on success or error object on failure
 	 * @throws \Kshabazz\Sigma\SigmaException
 	 * @see $_blocks
 	 */
-	private function buildBlocks($string)
+	private function buildBlocks( $pTemplate )
 	{
 		$blocks = [];
 		// When no blocks are found, return immediately.
-		if ( \preg_match_all($this->blockRegExp, $string, $regs, PREG_SET_ORDER) < 1 )
+		if ( \preg_match_all($this->blockRegExp, $pTemplate, $regs, PREG_SET_ORDER) < 1 )
 		{
 			return $blocks;
 		}
@@ -171,15 +173,17 @@ class Block
 			$blocks[$blockname] = true;
 			$inner = $this->buildBlocks($blockcontent);
 
-			foreach ($inner as $name => $v) {
-				$pattern     = sprintf('@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name);
-				$replacement = $this->openingDelimiter.'__'.$name.'__'.$this->closingDelimiter;
-				$this->_children[$blockname][$name] = true;
-				$this->_blocks[$blockname]          = preg_replace(
-					$pattern, $replacement, $this->_blocks[$blockname]
+			foreach ($inner as $name => $v)
+			{
+				$pattern = sprintf( '@<!--\s+BEGIN\s+%s\s+-->(.*)<!--\s+END\s+%s\s+-->@sm', $name, $name );
+				$replacement = $this->openingDelimiter . '__' . $name . '__' . $this->closingDelimiter;
+				$this->_children[ $blockname ][ $name ] = TRUE;
+				$this->_blocks[ $blockname ] = preg_replace(
+					$pattern, $replacement, $this->_blocks[ $blockname ]
 				);
 			}
 		}
+
 		return $blocks;
 	}
 //

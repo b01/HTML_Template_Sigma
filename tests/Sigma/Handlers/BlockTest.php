@@ -21,20 +21,19 @@ class BlockTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function test_construct()
 	{
-		$file = FIXTURES_DIR . DIRECTORY_SEPARATOR . 'block.tpl';
-		$template = \file_get_contents( $file );
-		$blocks = new Block( $template, '{', '}' );
+		$blocks = new Block( '',  '{', '}' );
 		$this->assertInstanceOf('Kshabazz\\Sigma\\Handlers\\Block', $blocks );
 	}
 
 	/**
 	 * @covers ::getBlockList
+	 * @covers ::buildBlocks
 	 */
 	public function test_getBlockList()
 	{
 		$file = FIXTURES_DIR . DIRECTORY_SEPARATOR . 'block.tpl';
 		$template = \file_get_contents( $file );
-		$blocks = new Block( $template, '{', '}' );
+		$blocks = new Block( $template );
 
 		$blockList = $blocks->getBlockList();
 
