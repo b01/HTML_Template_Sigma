@@ -126,6 +126,91 @@ define('Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)));
 */
 class Sigma
 {
+
+	/**
+	 * @var \Kshabazz\Sigma\Handlers\Block
+	 */
+	private $blocks;
+
+	/**
+	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
+	 *
+	 * The "prepared" template contains an internal representation of template
+	 * structure: essentially a serialized array of $_blocks, $_blockVariables,
+	 * $_children and $_functions, may also contain $_triggers. This allows
+	 * to bypass expensive calls to _buildBlockVariables() and especially
+	 * _buildBlocks() when reading the "prepared" template instead of
+	 * the "source" one.
+	 *
+	 * The files in this cache do not have any TTL and are regenerated when the
+	 * source templates change.
+	 *
+	 * NOTE: Caching will be turned off when directory is set to NULL.
+	 *
+	 * @param string $pDirectory Location of cache files.
+	 * @see Parser(), _getCached(), _writeCache()
+	 * @return \Kshabazz\Sigma\Parser
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	public function setCacheRoot( $pDirectory )
+	{
+		// Report when invalid values are passed as an argument.
+		if ( !\is_string($pDirectory) && !\is_null($pDirectory) )
+		{
+			throw new SigmaException(
+				-17,
+				NULL,
+				sprintf( 'Argument passed to %s::%s() was invalid', __CLASS__, __FUNCTION__ )
+			);
+		}
+
+		if ( empty($pDirectory) )
+		{
+			$pDirectory = NULL;
+		}
+		else if ( \is_dir($pDirectory) )
+		{
+			// Ensure the directory has the trailing slash, helps shorten code.
+			if ( DIRECTORY_SEPARATOR != \substr($pDirectory, -1) )
+			{
+				$pDirectory .= DIRECTORY_SEPARATOR;
+			}
+		}
+		else
+		{ // When the directory does not exist and it is not empty, then throw an error.
+			throw new SigmaException( SigmaException::BAD_CACHE_DIR, [$pDirectory] );
+		}
+
+		$this->_cacheRoot = $pDirectory;
+
+		return $this;
+	}
+
+	/**
+	 * Sets the directory where to look for templates. This directory is prefixed to all filenames passed to the
+	 * object.
+	 *
+	 * @param string $pDirectory Location to look for templates.
+	 * @see \Kshabazz\Sigma\Parser()
+	 * @return \Kshabazz\Sigma\Parser
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	public function setTemplateDirectory( $pDirectory )
+	{
+		// Add a trailing slash, when missing.
+		if ( !empty($pDirectory) && DIRECTORY_SEPARATOR != \substr($pDirectory, -1) )
+		{
+			$pDirectory .= DIRECTORY_SEPARATOR;
+		}
+
+		$this->fileRoot = $pDirectory;
+
+		return $this;
+	}
+
+// Everything below this line has not been refactored.
+
+
     /**
      * First character of a variable placeholder ( _{_VARIABLE} ).
      * @var      string
@@ -392,90 +477,12 @@ class Sigma
         $this->setTemplateDirectory($root);
         $this->setCacheRoot($cacheRoot);
 
-        $this->setCallbackFunction('h', array(&$this, '_htmlspecialchars'));
-        $this->setCallbackFunction('e', array(&$this, '_htmlentities'));
+        $this->setCallbackFunction('h', [&$this, '_htmlspecialchars']);
+        $this->setCallbackFunction('e', [&$this, '_htmlentities']);
         $this->setCallbackFunction('u', 'urlencode');
         $this->setCallbackFunction('r', 'rawurlencode');
-        $this->setCallbackFunction('j', array(&$this, '_jsEscape'));
+        $this->setCallbackFunction('j', [&$this, '_jsEscape']);
     }
-
-	/**
-	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
-	 *
-	 * The "prepared" template contains an internal representation of template
-	 * structure: essentially a serialized array of $_blocks, $_blockVariables,
-	 * $_children and $_functions, may also contain $_triggers. This allows
-	 * to bypass expensive calls to _buildBlockVariables() and especially
-	 * _buildBlocks() when reading the "prepared" template instead of
-	 * the "source" one.
-	 *
-	 * The files in this cache do not have any TTL and are regenerated when the
-	 * source templates change.
-	 *
-	 * NOTE: Caching will be turned off when directory is set to NULL.
-	 *
-	 * @param string $pDirectory Location of cache files.
-	 * @see Parser(), _getCached(), _writeCache()
-	 * @return \Kshabazz\Sigma\Parser
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	public function setCacheRoot( $pDirectory )
-	{
-		// Report when invalid values are passed as an argument.
-		if ( !\is_string($pDirectory) && !\is_null($pDirectory) )
-		{
-			throw new SigmaException(
-				-17,
-				NULL,
-				sprintf( 'Argument passed to %s::%s() was invalid', __CLASS__, __FUNCTION__ )
-			);
-		}
-
-		if ( empty($pDirectory) )
-		{
-			$pDirectory = NULL;
-		}
-		else if ( \is_dir($pDirectory) )
-		{
-			// Ensure the directory has the trailing slash, helps shorten code.
-			if ( DIRECTORY_SEPARATOR != \substr($pDirectory, -1) )
-			{
-				$pDirectory .= DIRECTORY_SEPARATOR;
-			}
-		}
-		else
-		{ // When the directory does not exist and it is not empty, then throw an error.
-				throw new SigmaException( SigmaException::BAD_CACHE_DIR, [$pDirectory] );
-		}
-
-		$this->_cacheRoot = $pDirectory;
-
-		return $this;
-	}
-
-	/**
-	 * Sets the directory where to look for templates. This directory is prefixed to all filenames passed to the
-	 * object.
-	 *
-	 * @param string $pDirectory Location to look for templates.
-	 * @see \Kshabazz\Sigma\Parser()
-	 * @return \Kshabazz\Sigma\Parser
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	public function setTemplateDirectory( $pDirectory )
-	{
-		// Add a trailing slash, when missing.
-		if ( !empty($pDirectory) && DIRECTORY_SEPARATOR != \substr($pDirectory, -1) )
-		{
-			$pDirectory .= DIRECTORY_SEPARATOR;
-		}
-
-		$this->fileRoot = $pDirectory;
-
-		return $this;
-	}
-
-// Everything below this line has not been refactored.
 
     /**
      * Sets the option for the template class
@@ -911,7 +918,12 @@ class Sigma
      */
     function setTemplate($template, $removeUnknownVariables = true, $removeEmptyBlocks = true, $cacheFilename = null)
     {
-	    $template = preg_replace_callback($this->includeRegExp, array(&$this, '_makeTrigger'), $template);
+		// Parse the template for include statements and replace them with triggers.
+	    $template = preg_replace_callback(
+			$this->includeRegExp,
+			[&$this, '_makeTrigger'],
+			$template
+		);
 
 	    $this->_resetTemplate($removeUnknownVariables, $removeEmptyBlocks);
         $list = $this->_buildBlocks(
