@@ -21,12 +21,15 @@ class SigmaTest extends \PHPUnit_Framework_TestCase
 	}
 
 	/**
-	 * @covers ::setRoot
+	 * @covers ::setTemplateDirectory
 	 */
 	public function test_setRoot()
 	{
-		$this->markTestIncomplete('WIP: test_setRoot');
-		$parser = new Sigma('', '');
+		$parser = new Sigma( '', '' );
+		$parser->setTemplateDirectory( FIXTURES_DIR );
+		$actual = $parser->loadTemplateFile( 'placeholder.tpl' );
+		$this->assertTrue( $actual );
+
 	}
 
 	/**

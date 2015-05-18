@@ -993,6 +993,8 @@ class Sigma
         if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks, $filename))) {
             return $res;
         }
+
+		return TRUE;
     }
 
 
