@@ -23,7 +23,7 @@ class SigmaException extends \Exception
 		BLOCK_EXISTS = -12,
 		INVALID_CALLBACK = -13,
 		CALLBACK_SYNTAX_ERROR = -14,
-		BAD_TEMPLATE_DIR = -15,
+		BAD_TEMPLATE = -15,
 		BAD_CACHE_DIR = -16;
 	/**#@-*/
 
@@ -39,7 +39,7 @@ class SigmaException extends \Exception
 		self::BLOCK_EXISTS          => 'Block \'%s\' already exists',
 		self::INVALID_CALLBACK      => 'Callback does not exist',
 		self::CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
-		self::BAD_TEMPLATE_DIR      => 'Cannot set template root to a directory that does not exists "%s".',
+		self::BAD_TEMPLATE          => 'The template file does not exists: "%s".',
 		self::BAD_CACHE_DIR         => 'Cannot set cache root to a directory that does not exists "%s".'
 	];
 

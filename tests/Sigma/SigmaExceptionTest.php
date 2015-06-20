@@ -38,7 +38,7 @@ class SigmaExceptionTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function test_parsed_error_message()
 	{
-		throw new SigmaException( SigmaException::BAD_TEMPLATE_DIR , ['test'] );
+		throw new SigmaException( SigmaException::BAD_TEMPLATE , ['test'] );
 	}
 
 	/**

@@ -15,7 +15,7 @@ class ParserTest extends \PHPUnit_Framework_TestCase
 	}
 	public function test_construct()
 	{
-		$parser = new Parser( $this->fixtures, $this->cache );
+		$parser = new Parser( $this->fixtures . 'block.tpl', $this->cache );
 		$this->assertInstanceOf( '\\Kshabazz\\Sigma\\Parser', $parser );
 	}
 }
