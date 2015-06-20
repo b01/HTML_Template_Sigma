@@ -66,6 +66,14 @@ class Block
 	private $commentRegExp;
 
 	/**
+	 * Flag indicating the global block has been parsed (TRUE) or not (FALSE).
+	 *
+	 * @var boolean
+	 * @see
+	 */
+	private $flagGlobalParsed;
+
+	/**
 	 * List of blocks which should not be shown even if not "empty"
 	 *
 	 * @var array
@@ -249,7 +257,7 @@ class Block
 		$content = \preg_replace( $this->commentRegExp, '', $pTemplate );
 		// Format the content as a block.
 		$content = \sprintf( "<!-- BEGIN {$pBlock} -->%s<!-- END {$pBlock} -->", $content );
-		// Add the block.
+		// Add the block back.
 		$this->buildBlocks( $content );
 
 		return TRUE;
@@ -322,7 +330,7 @@ class Block
 	 * @throws \Kshabazz\Sigma\SigmaException
 	 * @see replaceBlock(), replaceBlockfile()
 	 */
-	private function removeBlockData( $block, $keepContent = FALSE )
+	public function removeBlockData( $block, $keepContent = FALSE )
 	{
 		if ( !\array_key_exists($block, $this->_blocks) )
 		{
@@ -350,61 +358,6 @@ class Block
 
 		return TRUE;
 	}
-//
-//	/**
-//	 * Adds a block to the template changing a variable placeholder to a block placeholder.
-//	 *
-//	 * This means that a new block will be integrated into the template in
-//	 * place of a variable placeholder. The variable placeholder will be
-//	 * removed and the new block will behave in the same way as if it was
-//	 * inside the original template.
-//	 *
-//	 * The block content must not start with <!-- BEGIN blockname --> and end with
-//	 * <!-- END blockname -->, if it does, an error will be thrown.
-//	 *
-//	 * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
-//	 * @param string $block name of the block to be added
-//	 * @param string $template content of the block
-//	 *
-//	 * @access public
-//	 * @return mixed SIGMA_OK on success, error object on failure
-//	 * @throws \Kshabazz\Sigma\SigmaException
-//	 * @see    addBlockfile()
-//	 */
-//	public function addBlock( $placeholder, $block, $template )
-//	{
-////		var_dump($block);
-//		// Throw an error if the block already exists.
-//		if ( isset($this->_blocks[$block]) )
-//		{
-//			throw new SigmaException( SigmaException::BLOCK_EXISTS, [$block] );
-//		}
-//
-//		// Find the blocks that contain the placeholder.
-//		$parents = $this->_findParentBlocks( $placeholder );
-//
-////		var_dump($placeholder, $parents);
-//		// When none or more then one block contains the placeholder, throw an error.
-//		if ( 0 == count($parents) )
-//		{
-//			throw new SigmaException( SigmaException::PLACEHOLDER_NOT_FOUND, [$placeholder] );
-//		}
-//		elseif (count($parents) > 1)
-//		{
-//			throw new SigmaException( SigmaException::PLACEHOLDER_DUPLICATE, $placeholder );
-//		}
-//
-//		$list = $this->_buildBlocks(
-//			"<!-- BEGIN $block -->" .
-//			preg_replace($this->commentRegExp, '', $template) .
-//			"<!-- END $block -->"
-//		);
-//		if (is_a($list, 'PEAR_Error')) {
-//			return $list;
-//		}
-//		$this->_replacePlaceholder($parents[0], $placeholder, $block);
-//		return $this->_buildBlockVariables($block);
-//	}
 
 //	/**
 //	 * Adds a block taken from a file to the template, changing a variable placeholder
@@ -577,54 +530,5 @@ class Block
 //		$this->_hiddenBlocks[$block] = true;
 //		return SIGMA_OK;
 //	}
-//
-//	/**
-//	 * Returns the name of the (first) block that contains the specified placeholder.
-//	 *
-//	 * @param string $placeholder Name of the placeholder you're searching
-//	 * @param string $block       Name of the block to scan. If left out (default) all blocks are scanned.
-//	 *
-//	 * @access public
-//	 * @return string Name of the (first) block that contains the specified placeholder.
-//	 *                If the placeholder was not found an empty string is returned.
-//	 * @throws PEAR_Error
-//	 */
-//	function placeholderExists($placeholder, $block = '')
-//	{
-//		if ('' != $block && !isset($this->_blocks[$block])) {
-//			return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
-//		}
-//		if ('' != $block) {
-//			// if we search in the specific block, we should just check the array
-//			return isset($this->_blockVariables[$block][$placeholder])? $block: '';
-//		} else {
-//			// _findParentBlocks returns an array, we need only the first element
-//			$parents = $this->_findParentBlocks($placeholder);
-//			return empty($parents)? '': $parents[0];
-//		}
-//	}
-//
-//	/**
-//	 * Returns the names of the blocks where the variable placeholder appears
-//	 *
-//	 * @param string $variable variable name
-//	 *
-//	 * @return array block names
-//	 * @see addBlock(), addBlockfile(), placeholderExists()
-//	 */
-//	private function _findParentBlocks( $variable )
-//	{
-//		$parents = [];
-//		foreach ( $this->_blockVariables as $blockname => $varnames )
-//		{
-//			if ( !empty($varnames[$variable]) )
-//			{
-//				$parents[] = $blockname;
-//			}
-//		}
-//
-//		return $parents;
-//	}
-//
 }
 ?>

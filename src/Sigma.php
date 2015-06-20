@@ -130,9 +130,65 @@ class Sigma
 {
 
 	/**
+	 * Blocks handler
+	 *
 	 * @var \Kshabazz\Sigma\Handlers\Block
 	 */
 	private $blocks;
+
+	/**
+	 * Flag indicating the global block has been parsed (TRUE) or not (FALSE).
+	 *
+	 * @var boolean
+	 * @see
+	 */
+	private $flagGlobalParsed;
+
+
+	/**
+	 * Parse child blocks
+	 *
+	 * @param $block
+	 * @param $outer
+	 * @param $fakeParse
+	 * @param $empty
+	 * @return boolean
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	private function parseChildBlocks( $block, &$outer, $fakeParse, &$empty )
+	{
+		if ( !array_key_exists($block, $this->_children ) )
+		{
+			return FALSE;
+		}
+		foreach ( $this->_children[ $block ] as $innerblock => $v )
+		{
+			$placeholder = $this->openingDelimiter . '__' . $innerblock . '__' . $this->closingDelimiter;
+
+			if ( isset( $this->_hiddenBlocks[ $innerblock ] ) )
+			{
+				// don't bother actually parsing this inner block; but we _have_
+				// to go through its local vars to prevent problems on next iteration
+				$this->parse( $innerblock, TRUE, TRUE );
+				unset( $this->_hiddenBlocks[ $innerblock ] );
+				$outer = \str_replace( $placeholder, '', $outer );
+			}
+			else
+			{
+				$this->parse( $innerblock, TRUE, $fakeParse );
+				// block is not empty if its inner block is not empty
+				if ( '' != $this->_parsedBlocks[ $innerblock ] )
+				{
+					$empty = FALSE;
+				}
+
+				$outer = \str_replace( $placeholder, $this->_parsedBlocks[ $innerblock ], $outer );
+				$this->_parsedBlocks[ $innerblock ] = '';
+			}
+		}
+
+		return TRUE;
+	}
 
 	/**
 	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
@@ -208,26 +264,6 @@ class Sigma
 		$this->fileRoot = $pDirectory;
 
 		return $this;
-	}
-
-	/**
-	 * @param Block $pBlocks
-	 * @param string $pBlock
-	 * @param string $pContent Any content that can be in a template.
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	private function composerBlocks( Block $pBlocks, $pBlock, $pContent )
-	{
-		// Remove all HTML comments.
-		$content = \preg_replace( $this->commentRegExp, '', $pContent );
-		// Format the content as a block.
-		$content = \sprintf( "<!-- BEGIN {$pBlock} -->%s<!-- END {$pBlock} -->", $content );
-		// Add the block.
-		$pBlocks->buildBlocks( $content );
-
-		// Update blocks.
-		$this->_blocks = $pBlocks->getBlocks();
-		$this->_children = $pBlocks->getChildrenData();
 	}
 
 // Everything below this line has not been refactored.
@@ -397,12 +433,6 @@ class Sigma
      * @access   private
      */
     var $_cacheRoot = null;
-
-    /**
-     * Flag indicating that the global block was parsed
-     * @var    boolean
-     */
-    var $flagGlobalParsed = false;
 
     /**
      * Options to control some finer aspects of Sigma's work.
@@ -635,30 +665,31 @@ class Sigma
      * Parses the given block.
      *
      * @param string $block         block name
-     * @param bool   $flagRecursion true if the function is called recursively (do not set this to true yourself!)
+     * @param bool   $recursive true if the function is called recursively (do not set this to true yourself!)
      * @param bool   $fakeParse     true if parsing a "hidden" block (do not set this to true yourself!)
      *
      * @return bool whether the block was "empty"
      * @access public
      * @see    parseCurrentBlock()
-     * @throws PEAR_Error
+     * @throws \Kshabazz\Sigma\SigmaException
      */
-    function parse($block = '__global__', $flagRecursion = false, $fakeParse = false)
+    function parse( $block = '__global__', $recursive = false, $fakeParse = false )
     {
-        static $vars;
+		// Use this to track all of the variables during recursive calls.
+		static $vars;
 
-        if (!isset($this->_blocks[$block])) {
-            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
-        }
-        if ('__global__' == $block) {
-            $this->flagGlobalParsed = true;
-        }
+		// When the block does not exist, let it be known immediately.
+		if ( !\array_key_exists($block, $this->_blocks) )
+		{
+			throw new SigmaException( SigmaException::BLOCK_NOT_FOUND, [$block] );
+		}
+
+		// Initialize a block that has not been parsed.
         if (!isset($this->_parsedBlocks[$block])) {
             $this->_parsedBlocks[$block] = '';
         }
-        $outer = $this->_blocks[$block];
 
-        if (!$flagRecursion) {
+        if (!$recursive) {
             $vars = [];
         }
         // block is not empty if its local var is substituted
@@ -672,45 +703,39 @@ class Sigma
             }
         }
 
-        // processing of the inner blocks
-        if (isset($this->_children[$block])) {
-            foreach ($this->_children[$block] as $innerblock => $v) {
-                $placeholder = $this->openingDelimiter.'__'.$innerblock.'__'.$this->closingDelimiter;
+		$outer = $this->_blocks[$block];
 
-                if (isset($this->_hiddenBlocks[$innerblock])) {
-                    // don't bother actually parsing this inner block; but we _have_
-                    // to go through its local vars to prevent problems on next iteration
-                    $this->parse($innerblock, true, true);
-                    unset($this->_hiddenBlocks[$innerblock]);
-                    $outer = str_replace($placeholder, '', $outer);
+		// processing of the inner blocks.
+		$this->parseChildBlocks( $block, $outer, $fakeParse, $empty );
 
-                } else {
-                    $this->parse($innerblock, true, $fakeParse);
-                    // block is not empty if its inner block is not empty
-                    if ('' != $this->_parsedBlocks[$innerblock]) {
-                        $empty = false;
-                    }
 
-                    $outer = str_replace($placeholder, $this->_parsedBlocks[$innerblock], $outer);
-                    $this->_parsedBlocks[$innerblock] = '';
-                }
-            }
-        }
-
-        // add "global" variables to the static array
+		// add "global" variables to the static array
         foreach ($this->_globalVariables as $allowedvar => $value) {
             if (isset($this->_blockVariables[$block][$allowedvar])) {
                 $vars[$this->openingDelimiter . $allowedvar . $this->closingDelimiter] = $value;
             }
         }
         // if we are inside a hidden block, don't bother
-        if (!$fakeParse) {
-            if (0 != count($vars) && (!$flagRecursion || !empty($this->_functions[$block]))) {
-                $varKeys     = array_keys($vars);
-                $varValues   = $this->_options['preserve_data']
-                               ? array_map([&$this, '_preserveOpeningDelimiter'], array_values($vars))
-                               : array_values($vars);
-            }
+		if ( !$fakeParse )
+		{
+			// When there are global variables to replace and there is no
+			// recursive call to be made or there are functions replacements.
+			// setup for those replacements to be done.
+			if ( \count($vars) > 0 && (!$recursive || !empty($this->_functions[$block])))
+			{
+				$varKeys = \array_keys( $vars );
+				if ( $this->_options['preserve_data'] )
+				{
+					$varValues = \array_map(
+						[$this, '_preserveOpeningDelimiter'],
+						\array_values( $vars )
+					);
+				}
+				else
+				{
+					$varValues = \array_values( $vars );
+				}
+			}
 
             // check whether the block is considered "empty" and append parsed content if not
             if (!$empty || '__global__' == $block
@@ -742,7 +767,7 @@ class Sigma
                 }
                 // substitute variables only on non-recursive call, thus all
                 // variables from all inner blocks get substituted
-                if (!$flagRecursion && !empty($varKeys)) {
+                if (!$recursive && !empty($varKeys)) {
                     $outer = str_replace($varKeys, $varValues, $outer);
                 }
 
@@ -752,6 +777,13 @@ class Sigma
                 }
             }
         }
+
+		// When it is the global block flag it.
+		if ( strcmp('__global__', $block) === 0 )
+		{
+			$this->flagGlobalParsed = TRUE;
+		}
+
         return $empty;
     }
 
@@ -1040,8 +1072,16 @@ class Sigma
 			return new SigmaException( SigmaException::PLACEHOLDER_DUPLICATE, [$placeholder] );
 		}
 
-		$this->composerBlocks( $this->blocks, $block, $pContent );
+		// Remove all HTML comments.
+		$content = \preg_replace( $this->commentRegExp, '', $pContent );
+		// Format the content as a block.
+		$content = \sprintf( "<!-- BEGIN {$block} -->%s<!-- END {$block} -->", $content );
+		// Add the block.
+		$this->blocks->buildBlocks( $content );
 
+		// Update blocks.
+		$this->_blocks = $this->blocks->getBlocks();
+		$this->_children = $this->blocks->getChildrenData();
 
 		// Find the parent block of the placeholder so that it bc
         $this->_replacePlaceholder($parents[0], $placeholder, $block);
@@ -1685,21 +1725,24 @@ class Sigma
     }
 
 
-    /**
-     * Recursively removes all data belonging to a block
-     *
-     * @param string  $block       block name
-     * @param boolean $keepContent true if the parsed contents of the block should be kept
-     *
-     * @access private
-     * @return mixed SIGMA_OK on success, error object on failure
-     * @see    replaceBlock(), replaceBlockfile()
-     */
-    function _removeBlockData($block, $keepContent = false)
-    {
-        if (!isset($this->_blocks[$block])) {
-            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
-        }
+	/**
+	 * Recursively removes all data belonging to a block
+	 *
+	 * @param string $block block name
+	 * @param boolean $keepContent true if the parsed contents of the block should be kept
+	 *
+	 * @access private
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @see replaceBlock(), replaceBlockfile()
+	 */
+	function _removeBlockData($block, $keepContent = false)
+	{
+		if ( !isset($this->_blocks[$block]) )
+		{
+			return new SigmaException( SigmaException::BLOCK_NOT_FOUND, [$block] );
+		}
+
+		// Remove any children.
         if (!empty($this->_children[$block])) {
             foreach (array_keys($this->_children[$block]) as $child) {
                 $this->_removeBlockData($child, false);
@@ -1707,6 +1750,13 @@ class Sigma
             unset($this->_children[$block]);
         }
         unset($this->_blocks[$block]);
+
+//		$this->blocks->removeBlockData( $block, $keepContent );
+//		$this->_blocks = $this->blocks->getBlocks();
+//		$this->_hiddenBlocks = $this->blocks->getHidden();
+//		$this->_touchedBlocks = $this->blocks->getTouched();
+//		$this->_parsedBlocks = $this->blocks->getParsed();
+
         unset($this->_blockVariables[$block]);
         unset($this->_hiddenBlocks[$block]);
         unset($this->_touchedBlocks[$block]);
