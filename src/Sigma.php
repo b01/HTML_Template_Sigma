@@ -529,11 +529,11 @@ class Sigma
         $this->setTemplateDirectory($root);
         $this->setCacheRoot($cacheRoot);
 
-        $this->setCallbackFunction('h', [&$this, '_htmlspecialchars']);
-        $this->setCallbackFunction('e', [&$this, '_htmlentities']);
-        $this->setCallbackFunction('u', 'urlencode');
-        $this->setCallbackFunction('r', 'rawurlencode');
-        $this->setCallbackFunction('j', [&$this, '_jsEscape']);
+        $this->setCallbackFunction('h', [$this, '_htmlspecialchars']);
+        $this->setCallbackFunction('e', [$this, '_htmlentities']);
+        $this->setCallbackFunction('u', '\\urlencode');
+        $this->setCallbackFunction('r', '\\rawurlencode');
+        $this->setCallbackFunction('j', [$this, '_jsEscape']);
     }
 
     /**

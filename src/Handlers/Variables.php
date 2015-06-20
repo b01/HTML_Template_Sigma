@@ -36,7 +36,7 @@ class Variables
 	 */
 	public function __construct()
 	{
-		$this->_globalVariables = array();
+		$this->_globalVariables = [];
 	}
 
 	/**
@@ -73,13 +73,18 @@ class Variables
 	 */
 	function setVariable($variable, $value = '')
 	{
-		if (is_array($variable)) {
-			$this->_variables = array_merge($this->_variables, $variable);
-		} elseif (is_array($value)) {
+		if ( \is_array($variable) )
+		{
+			$this->_variables = array_merge( $this->_variables, $variable );
+		}
+		elseif ( \is_array($value) )
+		{
 			$this->_variables = array_merge(
-				$this->_variables, $this->_flattenVariables($variable, $value)
+				$this->_variables, $this->_flattenVariables( $variable, $value )
 			);
-		} else {
+		}
+		else
+		{
 			$this->_variables[$variable] = $value;
 		}
 	}

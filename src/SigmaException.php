@@ -40,7 +40,7 @@ class SigmaException extends \Exception
 		self::INVALID_CALLBACK      => 'Callback does not exist',
 		self::CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
 		self::BAD_TEMPLATE          => 'The template file does not exists: "%s".',
-		self::BAD_CACHE_DIR         => 'Cannot set cache root to a directory that does not exists "%s".'
+		self::BAD_CACHE_DIR         => 'Directory does not exists, cannot set cache directory to: "%s".'
 	];
 
 	/**
@@ -53,10 +53,10 @@ class SigmaException extends \Exception
 	public function __construct( $pCode, array $pData = NULL, $customMessage = NULL )
 	{
 		// When custom message is anything other than a string or null.
-		if ( !(is_string($customMessage) && strlen($customMessage) > 0) && !is_null($customMessage) )
+		if ( !(\is_string($customMessage) && \strlen($customMessage) > 0) && !\is_null($customMessage) )
 		{
 			throw new \InvalidArgumentException(
-				'Must be a string of length greater than zero or null'
+				'Third parameter must be a string of length greater than zero or null.'
 			);
 		}
 		$message = $this->getMessageByCode( $pCode, $pData, $customMessage );

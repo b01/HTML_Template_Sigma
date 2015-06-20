@@ -35,7 +35,7 @@ class SigmaTest extends \PHPUnit_Framework_TestCase
 	/**
 	 * @covers ::setCacheRoot
 	 * @expectedException \Kshabazz\Sigma\SigmaException
-	 * @expectedExceptionMessage Cannot set cache root to a directory that does not exists
+	 * @expectedExceptionMessage Directory does not exists, cannot set cache directory to: "does_not_exists"
 	 */
 	public function test_bad_setCacheRoot()
 	{
