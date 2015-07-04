@@ -1,4 +1,7 @@
 <?php namespace Kshabazz\Sigma\Handlers;
+/**
+ * Manages all the variables set and to be used to fill in placeholders.
+ */
 
 /**
  * Class Variables
@@ -29,7 +32,17 @@ class Variables
 	 * @var      array
 	 * @see      setVariable()
 	 */
-	private $_variables = array();
+	private $_variables = [];
+
+	/**
+	 * RegExp matching a variable placeholder in the template.
+	 * Per default "sm" is used as the regexp modifier, "i" is missing.
+	 * That means a case sensitive search is done.
+	 * @var      string
+	 * @access   public
+	 * @see      $blocknameRegExp, $openingDelimiter, $closingDelimiter
+	 */
+	private $variableNameRegExp = '[0-9A-Za-z._-]+';
 
 	/**
 	 * Constructor
@@ -53,7 +66,7 @@ class Variables
 	 */
 	function clearVariables()
 	{
-		$this->_variables = array();
+		$this->_variables = [];
 	}
 
 	/**
@@ -122,7 +135,7 @@ class Variables
 	 */
 	private function _flattenVariables($name, $array)
 	{
-		$ret = array();
+		$ret = [];
 		foreach ($array as $key => $value) {
 			if (is_array($value)) {
 				$ret = array_merge($ret, $this->_flattenVariables($name . '.' . $key, $value));

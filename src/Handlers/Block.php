@@ -134,12 +134,17 @@ class Block
 	}
 
 	/**
-	 * Get blocks parsed from template.
+	 * Get named block or all blocks parsed from template.
 	 *
 	 * @return array
 	 */
-	public function getBlocks()
+	public function getBlocks( $name = NULL )
 	{
+		if ( !\is_null($name) && \array_key_exists($name, $this->_blocks) )
+		{
+			return $this->_blocks[$name];
+		}
+
 		return $this->_blocks;
 	}
 

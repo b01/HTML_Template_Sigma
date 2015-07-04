@@ -9,6 +9,7 @@
 
 use \Kshabazz\Sigma\Handlers\Block,
 	\Kshabazz\Sigma\Handlers\Variables;
+use Kshabazz\Sigma\Handlers\Placeholder;
 
 /**
  * Class Parser
@@ -70,24 +71,11 @@ class Parser
 	private $closingDelimiter = '}';
 
 	/**
-	 * Function name RegExp
+	 * RegExp used to find file inclusion calls in the template
 	 *
 	 * @var string
 	 */
-	private $functionNameRegExp = '[_a-zA-Z][A-Za-z_0-9]*';
-
-	/**
-	 * Function name prefix used when searching for function calls in the template
-	 * @var string
-	 */
-	private $functionPrefix = 'func_';
-
-	/**
-	 * RegExp used to grep function calls in the template (set by the constructor)
-	 * @var    string
-	 * @see    _buildFunctionlist(), HTML_Template_Sigma()
-	 */
-	private $functionRegExp = '';
+	private $includeRegExp;
 
 	/**
 	 * First character of a variable placeholder ( _{_VARIABLE} ).
@@ -106,10 +94,23 @@ class Parser
 	private $options;
 
 	/**
+	 * @var string Template after it has been parsed.
+	 */
+	private $preparedTemplate;
+
+	/**
 	 * RegExp used to strip unused variable placeholders
-	 * @see      $variablesRegExp, HTML_Template_Sigma()
+	 * @see $variablesRegExp, HTML_Template_Sigma()
 	 */
 	private $removeVariablesRegExp = '';
+
+	/**
+	 * @var string Template string that had not been parse, set by {@see Parser::loadTemplateFile()} or {@see
+	 * Parser::loadTemplateString()}
+	 *
+	 * @see Parser::loadTemplateString()
+	 */
+	private $template;
 
 	/**
 	 * @var string Template file to parse.
@@ -129,23 +130,6 @@ class Parser
 	private $variableHandler = [];
 
 	/**
-	 * RegExp used to find variable placeholder, filled by the constructor
-	 * @var      string    Looks somewhat like @(delimiter varname delimiter)@
-	 * @see      HTML_Template_Sigma()
-	 */
-	private $variablesRegExp = '';
-
-	/**
-	 * RegExp matching a variable placeholder in the template.
-	 * Per default "sm" is used as the regexp modifier, "i" is missing.
-	 * That means a case sensitive search is done.
-	 * @var      string
-	 * @access   public
-	 * @see      $blocknameRegExp, $openingDelimiter, $closingDelimiter
-	 */
-	private $variableNameRegExp = '[0-9A-Za-z._-]+';
-
-	/**
 	 * Constructor: builds some complex regular expressions and optionally
 	 * sets the root directories.
 	 *
@@ -159,31 +143,18 @@ class Parser
 	 */
 	public function __construct( array $pOptions = NULL )
 	{
-		// BEGIN defaults
-		$this->variablesRegExp = \sprintf( '@%s(%s)(:(%s))?%s@sm',
-			$this->openingDelimiter,
-			$this->variableNameRegExp,
-			$this->functionNameRegExp,
-			$this->closingDelimiter
-		);
-
-		$this->removeVariablesRegExp = \sprintf( '@%s\s*(%s)\s*'. $this->closingDelimiter . '@sm',
-			$this->openingDelimiter,
-			$this->variableNameRegExp
-		);
-
 		$this->blockRegExp = \sprintf( '@<!--\s+BEGIN\s+(%s)\s+-->(.*)<!--\s+END\s+\1\s+-->@sm',
 			$this->blockNameRegExp
 		);
 
-		$this->functionRegExp = \sprintf( '@%s(%s)\s*\(@sm', $this->functionPrefix, $this->functionNameRegExp );
-
 		$this->options = [
 			self::OPTION_PRESERVE_DATA => FALSE,
 			self::OPTION_TRIM_ON_SAVE => TRUE,
-			self::OPTION_CHARSET => 'iso-8859-1',
+			self::OPTION_CHARSET => 'iso-8859-1', // @todo change to UTF-8
 			self::OPTION_CACHE_DIR => NULL
 		];
+
+		$this->includeRegExp = '#<!--\s+INCLUDE\s+(\S+)\s+-->#im';
 		// END Defaults
 
 		// Override default options.
@@ -239,20 +210,43 @@ class Parser
 
 		// Set and load the template.
 		$this->templateFile = $pTemplateFile;
-		$template = \file_get_contents( $this->templateFile );
+		$this->template = \file_get_contents( $this->templateFile );
 
 		// When unable to read the template.
-		if ( $template === FALSE ) {
+		if ( $this->template === FALSE ) {
 			throw new SigmaException( SigmaException::TPL_NOT_FOUND, [$pTemplateFile] );
 		}
 
-//		$this->_triggers = [];
-//		$this->_triggerBlock = '__global__';
-//		if (SIGMA_OK !== ($res = $this->setTemplate($template, $removeUnknownVariables, $removeEmptyBlocks, $pTemplateFile))) {
-//			return $res;
-//		}
+		// Responsible for parsing the blocks and placeholders.
+		$this->_triggers = [];
+		$this->_triggerBlock = '__global__';
+		$this->setTemplate( $this->template, $removeUnknownVariables, $removeEmptyBlocks, $this->templateFile );
 
 		return TRUE;
+	}
+
+	/**
+	 * Resets the object's properties, used before processing a new template
+	 *
+	 * @param boolean $removeUnknownVariables remove unknown/unused variables?
+	 * @param boolean $removeEmptyBlocks      remove empty blocks?
+	 *
+	 * @access private
+	 * @return void
+	 * @see \Kshabazz\Sigma\Parser::setTemplate(), loadTemplateFile()
+	 */
+	function resetTemplate($removeUnknownVariables = TRUE, $removeEmptyBlocks = TRUE)
+	{
+		$this->removeUnknownVariables = $removeUnknownVariables;
+		$this->removeEmptyBlocks      = $removeEmptyBlocks;
+		$this->currentBlock           = '__global__';
+		$this->_variables             = [];
+		$this->_blocks                = [];
+		$this->_children              = [];
+		$this->_parsedBlocks          = [];
+		$this->_touchedBlocks         = [];
+		$this->_functions             = [];
+		$this->flagGlobalParsed       = false;
 	}
 
 	/**
@@ -306,33 +300,6 @@ class Parser
 	}
 
 	/**
-	 * Sets the option for the template class
-	 *
-	 * Currently available options:
-	 * - preserve_data: If false (default), then substitute variables and
-	 *   remove empty placeholders in data passed through setVariable (see also
-	 *   PHP bugs #20199, #21951)
-	 * - trim_on_save: Whether to trim extra whitespace from template on cache
-	 *   save (defaults to true). Generally safe to leave this on, unless you
-	 *   have <<pre>><</pre>> in templates or want to preserve HTML indentantion
-	 * - charset: is used by builtin template callback 'h'/'e'. Defaults to 'iso-8859-1'
-	 *
-	 * @param string $pOption Option name
-	 * @param mixed $pValue Option value
-	 * @return mixed SIGMA_OK on success, error object on failure
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	function setOption( $pOption, $pValue )
-	{
-		if ( \array_key_exists($pOption, $this->options) ) {
-			$this->options[ $pOption ] = $pValue;
-			return TRUE;
-		}
-
-		throw new SigmaException( SigmaException::UNKNOWN_OPTION, [$pOption] );
-	}
-
-	/**
 	 * Sets a callback function.
 	 *
 	 * Sigma templates can contain simple function calls. This means that the
@@ -376,7 +343,7 @@ class Parser
 	 * @return mixed SIGMA_OK on success, error object on failure
 	 * @throws \Exception
 	 */
-	public function setCallbackFunction($tplFunction, callable $callback, $preserveArgs = false)
+	public function setCallbackFunction($tplFunction, callable $callback, $preserveArgs = FALSE)
 	{
 		$this->_callback[ $tplFunction ] = [
 			'data'         => $callback,
@@ -385,6 +352,68 @@ class Parser
 
 		return SIGMA_OK;
 	}
+
+	/**
+	 * Sets the option for the template class
+	 *
+	 * Currently available options:
+	 * - preserve_data: If false (default), then substitute variables and
+	 *   remove empty placeholders in data passed through setVariable (see also
+	 *   PHP bugs #20199, #21951)
+	 * - trim_on_save: Whether to trim extra whitespace from template on cache
+	 *   save (defaults to true). Generally safe to leave this on, unless you
+	 *   have <<pre>><</pre>> in templates or want to preserve HTML indentantion
+	 * - charset: is used by builtin template callback 'h'/'e'. Defaults to 'iso-8859-1'
+	 *
+	 * @param string $pOption Option name
+	 * @param mixed $pValue Option value
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	function setOption( $pOption, $pValue )
+	{
+		if ( \array_key_exists($pOption, $this->options) ) {
+			$this->options[ $pOption ] = $pValue;
+			return TRUE;
+		}
+
+		throw new SigmaException( SigmaException::UNKNOWN_OPTION, [$pOption] );
+	}
+
+	/**
+	 * Sets the template.
+	 *
+	 * Set the template manually using this function.
+	 *
+	 * @param string $pTemplate As a string.
+	 * @param boolean $removeUnknownVariables remove unknown/unused variables?
+	 * @param boolean $removeEmptyBlocks remove empty blocks?
+	 * @param boolean $cacheFilename name of writeCache file
+	 *
+	 * @access public
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @see Parser::loadTemplateFile()
+	 * @todo rename to: loadByString(...)
+	 */
+	function setTemplate( $pTemplate, $removeUnknownVariables = TRUE, $removeEmptyBlocks = TRUE, $cacheFilename = NULL )
+	{
+		$this->template = $pTemplate;
+		// Parse the template for include statements and replace them with triggers
+		// to be executed later.
+		$this->preparedTemplate = $this->parseIncludes( $this->template );
+
+		$this->resetTemplate( $removeUnknownVariables, $removeEmptyBlocks );
+
+		$this->blocks = new Block( $this->preparedTemplate );
+		$this->_blocks = $this->blocks->getBlocks();
+		$this->_children = $this->blocks->getChildrenData();
+		$this->placeholders = new Placeholder( $this->blocks );
+
+//		$this->_buildBlockVariables();
+
+//		return $this->_writeCache( $cacheFilename, '__global__' );
+	}
+
 	/**
 	 * Sets a variable value.
 	 *
@@ -456,6 +485,36 @@ class Parser
 		];
 
 		return \strtr( $pValue, $map );
+	}
+
+	/**
+	 * Callback generating a placeholder to replace an <!-- INCLUDE filename --> statement
+	 *
+	 * @param array $matches Matches from preg_replace_callback() call
+	 * @return string A placeholder.
+	 */
+	private function _makeTrigger($matches)
+	{
+		$name = 'trigger_' . substr(md5($matches[1] . ' ' . uniqid($this->_triggerBlock)), 0, 10);
+		$this->_triggers[$this->_triggerBlock][$name] = $matches[1];
+		return $this->openingDelimiter . $name . $this->closingDelimiter;
+	}
+
+	/**
+	 * When you want to include on PHP file from another.
+	 *
+	 * @param $pTemplate
+	 * @return mixed
+	 */
+	private function parseIncludes( $pTemplate )
+	{
+		$pTemplate = \preg_replace_callback(
+			$this->includeRegExp,
+			[$this, '_makeTrigger'],
+			$pTemplate
+		);
+
+		return $pTemplate;
 	}
 }
 ?>
