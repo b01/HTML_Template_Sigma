@@ -23,7 +23,9 @@
  * Error codes
  * @see HTML_Template_Sigma::errorMessage()
  */
-use Kshabazz\Sigma\Handlers\Block;
+
+use \Kshabazz\Sigma\Handlers\Block,
+	\Kshabazz\Sigma\Parsers\Block as BlockParser;
 
 define('SIGMA_OK',                         1);
 define('SIGMA_ERROR',                     -1);
@@ -125,6 +127,7 @@ define('Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)));
 * @license  http://www.php.net/license/3_01.txt PHP License 3.01
 * @version  Release: @package_version@
 * @link     http://pear.php.net/package/HTML_Template_Sigma
+ * @todo Rename this class to Processor.
 */
 class Sigma
 {
@@ -135,6 +138,9 @@ class Sigma
 	 * @var \Kshabazz\Sigma\Handlers\Block
 	 */
 	private $blocks;
+
+	/** @var \Kshabazz\Sigma\Parsers\Block */
+	private $blockParser;
 
 	/**
 	 * Flag indicating the global block has been parsed (TRUE) or not (FALSE).
@@ -155,13 +161,15 @@ class Sigma
 	 * @return boolean
 	 * @throws \Kshabazz\Sigma\SigmaException
 	 */
-	private function parseChildBlocks( $block, &$outer, $fakeParse, &$empty )
+	private function parseChildBlocks( $block, $children, &$outer, $fakeParse, &$empty )
 	{
-		if ( !array_key_exists($block, $this->_children ) )
+		if ( !\array_key_exists($block, $children) )
 		{
 			return FALSE;
 		}
-		foreach ( $this->_children[ $block ] as $innerblock => $v )
+
+		$childBlocks = $children[$block];
+		foreach ( $childBlocks as $innerblock => $v )
 		{
 			$placeholder = $this->openingDelimiter . '__' . $innerblock . '__' . $this->closingDelimiter;
 
@@ -505,20 +513,22 @@ class Sigma
      */
     var $_triggerBlock = '__global__';
 
-    /**
-     * Constructor: builds some complex regular expressions and optionally
-     * sets the root directories.
-     *
-     * Make sure that you call this constructor if you derive your template
-     * class from this one.
-     *
-     * @param string $root      root directory for templates
-     * @param string $cacheRoot directory to cache "prepared" templates in
-     *
-     * @see   setTemplateDirectory(), setCacheRoot()
-     */
-    function __construct($root = '', $cacheRoot = '')
-    {
+	/**
+	 * Constructor: builds some complex regular expressions and optionally
+	 * sets the root directories.
+	 *
+	 * Make sure that you call this constructor if you derive your template
+	 * class from this one.
+	 *
+	 * @param string $root      root directory for templates
+	 * @param string $cacheRoot directory to cache "prepared" templates in
+	 *
+	 * @see   setTemplateDirectory(), setCacheRoot()
+	 */
+	function __construct($root = '', $cacheRoot = '')
+	{
+		$this->blockParser = new BlockParser();
+
         $this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
                                        '(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
         $this->removeVariablesRegExp = '@' . $this->openingDelimiter . '\s*(' . $this->variablenameRegExp . ')\s*'
@@ -673,7 +683,7 @@ class Sigma
      * @see    parseCurrentBlock()
      * @throws \Kshabazz\Sigma\SigmaException
      */
-    function parse( $block = '__global__', $recursive = false, $fakeParse = false )
+    function parse( $block = '__global__', $recursive = FALSE, $fakeParse = FALSE )
     {
 		// Use this to track all of the variables during recursive calls.
 		static $vars;
@@ -706,7 +716,7 @@ class Sigma
 		$outer = $this->_blocks[$block];
 
 		// processing of the inner blocks.
-		$this->parseChildBlocks( $block, $outer, $fakeParse, $empty );
+		$this->parseChildBlocks( $block, $this->_children, $outer, $fakeParse, $empty );
 
 
 		// add "global" variables to the static array

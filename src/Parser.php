@@ -407,7 +407,7 @@ class Parser
 		$this->blocks = new Block( $this->preparedTemplate );
 		$this->_blocks = $this->blocks->getBlocks();
 		$this->_children = $this->blocks->getChildrenData();
-		$this->placeholders = new Placeholder( $this->blocks );
+//		$this->placeholders = new Placeholder( $this->blocks );
 
 //		$this->_buildBlockVariables();
 
