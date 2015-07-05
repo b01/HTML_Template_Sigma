@@ -52,7 +52,6 @@ class Placeholder
 		$this->_functions = [];
 		$this->openingDelimiter = '{';
 
-		// BEGIN defaults
 		$this->variablesRegExp = \sprintf( '@%s(%s)(:(%s))?%s@sm',
 			$this->openingDelimiter,
 			$this->variableNameRegExp,
@@ -60,6 +59,7 @@ class Placeholder
 			$this->closingDelimiter
 		);
 
+		// @todo This only gets used in the Processor::get(), should not be here.
 		$this->removeVariablesRegExp = \sprintf( '@%s\s*(%s)\s*%s@sm',
 			$this->openingDelimiter,
 			$this->variableNameRegExp,
@@ -74,7 +74,7 @@ class Placeholder
 	/**
 	 * Recursively builds a list of all variables within a block.
 	 *
-	 * @uses Placeholder::_buildFunctionlist() Called on each block it visits.
+	 * @uses Placeholder::parseFunctions() Called on each block it visits.
 	 *
 	 * @param string $block block name
 	 * @return mixed SIGMA_OK on success, error object on failure

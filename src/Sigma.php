@@ -26,6 +26,7 @@
 
 use \Kshabazz\Sigma\Handlers\Block,
 	\Kshabazz\Sigma\Parsers\Block as BlockParser;
+use Kshabazz\Sigma\Parsers\Placeholder;
 
 define('SIGMA_OK',                         1);
 define('SIGMA_ERROR',                     -1);
@@ -148,13 +149,16 @@ class Sigma
 	 */
 	private $flagGlobalParsed;
 
+	/** @var \Kshabazz\Sigma\Parsers\Placeholder Placeholder parser. */
+	private $placeholder;
+
 	/**
 	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
 	 *
 	 * The "prepared" template contains an internal representation of template
 	 * structure: essentially a serialized array of $_blocks, $_blockVariables,
 	 * $_children and $_functions, may also contain $_triggers. This allows
-	 * to bypass expensive calls to _buildBlockVariables() and especially
+	 * to bypass expensive calls to Parser\Placholder::parser() and especially
 	 * _buildBlocks() when reading the "prepared" template instead of
 	 * the "source" one.
 	 *
@@ -264,13 +268,6 @@ class Sigma
     var $variablenameRegExp = '[0-9A-Za-z._-]+';
 
     /**
-     * RegExp used to find variable placeholder, filled by the constructor
-     * @var      string    Looks somewhat like @(delimiter varname delimiter)@
-     * @see      HTML_Template_Sigma()
-     */
-    var $variablesRegExp = '';
-
-    /**
      * RegExp used to strip unused variable placeholders
      * @see      $variablesRegExp, HTML_Template_Sigma()
      */
@@ -322,7 +319,7 @@ class Sigma
     /**
      * Variable names that appear in the block
      * @var      array
-     * @see      _buildBlockVariables()
+     * @see      Parser\Placholder::parser()
      * @access   private
      */
     var $_blockVariables = [];
@@ -405,25 +402,6 @@ class Sigma
     ];
 
     /**
-     * Function name prefix used when searching for function calls in the template
-     * @var    string
-     */
-    var $functionPrefix = 'func_';
-
-    /**
-     * Function name RegExp
-     * @var    string
-     */
-    var $functionnameRegExp = '[_a-zA-Z][A-Za-z_0-9]*';
-
-    /**
-     * RegExp used to grep function calls in the template (set by the constructor)
-     * @var    string
-     * @see    _buildFunctionlist(), HTML_Template_Sigma()
-     */
-    var $functionRegExp = '';
-
-    /**
      * List of functions found in the template.
      * @var    array
      * @access private
@@ -478,14 +456,12 @@ class Sigma
 	function __construct($root = '', $cacheRoot = '')
 	{
 		$this->blockParser = new BlockParser();
+		$this->placeholder = new Placeholder( $this->variablenameRegExp );
 
-        $this->variablesRegExp       = '@' . $this->openingDelimiter . '(' . $this->variablenameRegExp . ')' .
-                                       '(:(' . $this->functionnameRegExp . '))?' . $this->closingDelimiter . '@sm';
         $this->removeVariablesRegExp = '@' . $this->openingDelimiter . '\s*(' . $this->variablenameRegExp . ')\s*'
                                        . $this->closingDelimiter . '@sm';
         $this->blockRegExp           = '@<!--\s+BEGIN\s+(' . $this->blocknameRegExp
                                        . ')\s+-->(.*)<!--\s+END\s+\1\s+-->@sm';
-        $this->functionRegExp        = '@' . $this->functionPrefix . '(' . $this->functionnameRegExp . ')\s*\(@sm';
         $this->setTemplateDirectory($root);
         $this->setCacheRoot($cacheRoot);
 
@@ -618,8 +594,6 @@ class Sigma
         }
     }
 
-
-
 	/**
 	 * Parses the given block.
 	 *
@@ -700,7 +674,6 @@ class Sigma
      *
      * @access public
      * @return mixed SIGMA_OK on success, error object on failure
-     * @throws PEAR_Error
      */
     function setCurrentBlock($block = '__global__')
     {
@@ -760,7 +733,6 @@ class Sigma
      *
      * @access public
      * @return mixed SIGMA_OK on success, error object on failure
-     * @throws PEAR_Error
      * @see    $removeEmptyBlocks, $_touchedBlocks
      */
     function touchBlock($block)
@@ -791,7 +763,6 @@ class Sigma
      *
      * @access public
      * @return mixed SIGMA_OK on success, error object on failure
-     * @throws PEAR_Error
      */
     function hideBlock($block)
     {
@@ -837,7 +808,8 @@ class Sigma
 		$this->_blocks = $this->blocks->getBlocks();
 		$this->_children = $this->blocks->getChildrenData();
 
-		if ( SIGMA_OK !== ($res = $this->_buildBlockVariables()) )
+		if ( SIGMA_OK !== ($res = $this->placeholder->parse($this->_blockVariables, $this->_functions,
+				$this->_blocks, $this->_children)) )
 		{
 			return $res;
 		}
@@ -936,7 +908,8 @@ class Sigma
 
 		// Find the parent block of the placeholder so that it bc
         $this->_replacePlaceholder($parents[0], $placeholder, $block);
-        return $this->_buildBlockVariables($block);
+        return $this->placeholder->parse( $this->_blockVariables, $this->_functions,
+			$this->_blocks, $this->_children,$block );
     }
 
 
@@ -950,7 +923,6 @@ class Sigma
      *
      * @access public
      * @return mixed SIGMA_OK on success, error object on failure
-     * @throws PEAR_Error
      * @see    addBlock()
      */
     function addBlockfile($placeholder, $block, $filename)
@@ -1012,7 +984,8 @@ class Sigma
 		$this->_touchedBlocks = $this->blocks->getTouched();
 //		$this->_parsedBlocks = $this->blocks->getParsed();
         // renew the variables list
-        return $this->_buildBlockVariables($block);
+        return $this->placeholder->parse( $this->_blockVariables, $this->_functions,
+			$this->_blocks, $this->_children, $block );
     }
 
 
@@ -1025,7 +998,6 @@ class Sigma
      *
      * @access public
      * @return mixed SIGMA_OK on success, error object on failure
-     * @throws PEAR_Error
      * @see    replaceBlock(), addBlockfile()
      */
     function replaceBlockfile($block, $filename, $keepContent = false)
@@ -1256,55 +1228,6 @@ class Sigma
             }
         }
         return $ret;
-    }
-
-
-    /**
-     * Recursively builds a list of all variables within a block.
-     *
-     * Also calls _buildFunctionlist() for each block it visits
-     *
-     * @param string $block block name
-     *
-     * @access private
-     * @return mixed SIGMA_OK on success, error object on failure
-     * @see    _buildFunctionlist()
-     */
-    function _buildBlockVariables($block = '__global__')
-    {
-        $this->_blockVariables[$block] = [];
-        $this->_functions[$block]      = [];
-        preg_match_all($this->variablesRegExp, $this->_blocks[$block], $regs, PREG_SET_ORDER);
-        foreach ($regs as $match) {
-            $this->_blockVariables[$block][$match[1]] = true;
-            if (!empty($match[3])) {
-                $funcData = [
-                    'name' => $match[3],
-                    'args' => [$this->openingDelimiter . $match[1] . $this->closingDelimiter]
-                ];
-                $funcId   = substr(md5(serialize($funcData)), 0, 10);
-
-                // update block info
-                $this->_blocks[$block] = str_replace(
-                    $match[0],
-                    $this->openingDelimiter . '__function_' . $funcId . '__' . $this->closingDelimiter,
-                    $this->_blocks[$block]
-                );
-                $this->_blockVariables[$block]['__function_' . $funcId . '__'] = true;
-                $this->_functions[$block][$funcId] = $funcData;
-            }
-        }
-        if (SIGMA_OK != ($res = $this->_buildFunctionlist($block))) {
-            return $res;
-        }
-        if (isset($this->_children[$block]) && is_array($this->_children[$block])) {
-            foreach ($this->_children[$block] as $child => $v) {
-                if (SIGMA_OK != ($res = $this->_buildBlockVariables($child))) {
-                    return $res;
-                }
-            }
-        }
-        return SIGMA_OK;
     }
 
     /**
@@ -1728,145 +1651,6 @@ class Sigma
         }
         return SIGMA_OK;
     }
-
-
-    /**
-     * Builds a list of functions in a block.
-     *
-     * @param string $block Block name
-     *
-     * @access private
-     * @return mixed SIGMA_OK on success, error object on failure
-     * @see    _buildBlockVariables()
-     */
-    function _buildFunctionlist($block)
-    {
-        $template = $this->_blocks[$block];
-        $this->_blocks[$block] = '';
-
-        while (preg_match($this->functionRegExp, $template, $regs)) {
-            $this->_blocks[$block] .= substr($template, 0, strpos($template, $regs[0]));
-            $template = substr($template, strpos($template, $regs[0]) + strlen($regs[0]));
-
-            $state    = 1;
-            $arg      = '';
-            $quote    = '';
-            $funcData = [
-                'name' => $regs[1],
-                'args' => []
-            ];
-            for ($i = 0, $len = strlen($template); $i < $len; $i++) {
-                $char = $template[$i];
-                switch ($state) {
-                case 0:
-                case -1:
-                    break 2;
-
-                case 1:
-                    if (')' == $char) {
-                        $state = 0;
-                    } elseif (',' == $char) {
-                        $error = 'Unexpected \',\'';
-                        $state = -1;
-                    } elseif ('\'' == $char || '"' == $char) {
-                        $quote = $char;
-                        $state = 5;
-                    } elseif (!ctype_space($char)) {
-                        $arg  .= $char;
-                        $state = 3;
-                    }
-                    break;
-
-                case 2:
-                    $arg = '';
-                    if (',' == $char || ')' == $char) {
-                        $error = 'Unexpected \'' . $char . '\'';
-                        $state = -1;
-                    } elseif ('\'' == $char || '"' == $char) {
-                        $quote = $char;
-                        $state = 5;
-                    } elseif (!ctype_space($char)) {
-                        $arg  .= $char;
-                        $state = 3;
-                    }
-                    break;
-
-                case 3:
-                    if (')' == $char) {
-                        $funcData['args'][] = rtrim($arg);
-                        $state  = 0;
-                    } elseif (',' == $char) {
-                        $funcData['args'][] = rtrim($arg);
-                        $state = 2;
-                    } elseif ('\'' == $char || '"' == $char) {
-                        $quote = $char;
-                        $arg  .= $char;
-                        $state = 4;
-                    } else {
-                        $arg  .= $char;
-                    }
-                    break;
-
-                case 4:
-                    $arg .= $char;
-                    if ($quote == $char) {
-                        $state = 3;
-                    }
-                    break;
-
-                case 5:
-                    if ('\\' == $char) {
-                        $state = 6;
-                    } elseif ($quote == $char) {
-                        $state = 7;
-                    } else {
-                        $arg .= $char;
-                    }
-                    break;
-
-                case 6:
-                    $arg  .= $char;
-                    $state = 5;
-                    break;
-
-                case 7:
-                    if (')' == $char) {
-                        $funcData['args'][] = $arg;
-                        $state  = 0;
-                    } elseif (',' == $char) {
-                        $funcData['args'][] = $arg;
-                        $state  = 2;
-                    } elseif (!ctype_space($char)) {
-                        $error = 'Unexpected \'' . $char . '\' (expected: \')\' or \',\')';
-                        $state = -1;
-                    }
-                    break;
-                } // switch
-            } // for
-            if (0 != $state) {
-                return new \Exception(
-                    $this->errorMessage(
-                        SIGMA_CALLBACK_SYNTAX_ERROR,
-                        (empty($error) ? 'Unexpected end of input' : $error)
-                        . ' in ' . $regs[0] . substr($template, 0, $i)
-                    ),
-                    SIGMA_CALLBACK_SYNTAX_ERROR
-                );
-
-            } else {
-                $funcId   = 'f' . substr(md5(serialize($funcData)), 0, 10);
-                $template = substr($template, $i);
-
-                $this->_blocks[$block] .= $this->openingDelimiter . '__function_' . $funcId
-                                          . '__' . $this->closingDelimiter;
-                $this->_blockVariables[$block]['__function_' . $funcId . '__'] = true;
-                $this->_functions[$block][$funcId] = $funcData;
-            }
-        } // while
-        $this->_blocks[$block] .= $template;
-        return SIGMA_OK;
-    } // end func _buildFunctionlist
-
 
     /**
      * Quotes the string so that it can be used in Javascript string constants
