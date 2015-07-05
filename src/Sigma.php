@@ -120,8 +120,7 @@ define('Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)));
 * $html = $tpl->get();
 * </code>
 *
-* @category HTML
-* @package  HTML_Template_Sigma
+* @package  \Kshabazz\Sigma
 * @author   Ulf Wendel <ulf.wendel@phpdoc.de>
 * @author   Alexey Borzov <avb@php.net>
 * @license  http://www.php.net/license/3_01.txt PHP License 3.01
@@ -131,7 +130,6 @@ define('Kshabazz\\Sigma\\OS_WINDOWS', strtoupper(substr(PHP_OS, 0, 3)));
 */
 class Sigma
 {
-
 	/**
 	 * Blocks handler
 	 *
@@ -149,54 +147,6 @@ class Sigma
 	 * @see
 	 */
 	private $flagGlobalParsed;
-
-
-	/**
-	 * Parse child blocks
-	 *
-	 * @param $block
-	 * @param $outer
-	 * @param $fakeParse
-	 * @param $empty
-	 * @return boolean
-	 * @throws \Kshabazz\Sigma\SigmaException
-	 */
-	private function parseChildBlocks( $block, $children, &$outer, $fakeParse, &$empty )
-	{
-		if ( !\array_key_exists($block, $children) )
-		{
-			return FALSE;
-		}
-
-		$childBlocks = $children[$block];
-		foreach ( $childBlocks as $innerblock => $v )
-		{
-			$placeholder = $this->openingDelimiter . '__' . $innerblock . '__' . $this->closingDelimiter;
-
-			if ( isset( $this->_hiddenBlocks[ $innerblock ] ) )
-			{
-				// don't bother actually parsing this inner block; but we _have_
-				// to go through its local vars to prevent problems on next iteration
-				$this->parse( $innerblock, TRUE, TRUE );
-				unset( $this->_hiddenBlocks[ $innerblock ] );
-				$outer = \str_replace( $placeholder, '', $outer );
-			}
-			else
-			{
-				$this->parse( $innerblock, TRUE, $fakeParse );
-				// block is not empty if its inner block is not empty
-				if ( '' != $this->_parsedBlocks[ $innerblock ] )
-				{
-					$empty = FALSE;
-				}
-
-				$outer = \str_replace( $placeholder, $this->_parsedBlocks[ $innerblock ], $outer );
-				$this->_parsedBlocks[ $innerblock ] = '';
-			}
-		}
-
-		return TRUE;
-	}
 
 	/**
 	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
@@ -614,7 +564,6 @@ class Sigma
         }
     }
 
-
     /**
      * Prints a block with all replacements done.
      *
@@ -637,7 +586,6 @@ class Sigma
      * @param bool   $clear whether to clear parsed block contents
      *
      * @return string block with all replacements done
-     * @throws PEAR_Error
      * @access public
      * @see    show()
      */
@@ -671,132 +619,25 @@ class Sigma
     }
 
 
-    /**
-     * Parses the given block.
-     *
-     * @param string $block         block name
-     * @param bool   $recursive true if the function is called recursively (do not set this to true yourself!)
-     * @param bool   $fakeParse     true if parsing a "hidden" block (do not set this to true yourself!)
-     *
-     * @return bool whether the block was "empty"
-     * @access public
-     * @see    parseCurrentBlock()
-     * @throws \Kshabazz\Sigma\SigmaException
-     */
-    function parse( $block = '__global__', $recursive = FALSE, $fakeParse = FALSE )
-    {
-		// Use this to track all of the variables during recursive calls.
-		static $vars;
 
-		// When the block does not exist, let it be known immediately.
-		if ( !\array_key_exists($block, $this->_blocks) )
-		{
-			throw new SigmaException( SigmaException::BLOCK_NOT_FOUND, [$block] );
-		}
-
-		// Initialize a block that has not been parsed.
-        if (!isset($this->_parsedBlocks[$block])) {
-            $this->_parsedBlocks[$block] = '';
-        }
-
-        if (!$recursive) {
-            $vars = [];
-        }
-        // block is not empty if its local var is substituted
-        $empty = true;
-        foreach ($this->_blockVariables[$block] as $allowedvar => $v) {
-            if (isset($this->_variables[$allowedvar])) {
-                $vars[$this->openingDelimiter . $allowedvar . $this->closingDelimiter] = $this->_variables[$allowedvar];
-                $empty = false;
-                // vital for checking "empty/nonempty" status
-                unset($this->_variables[$allowedvar]);
-            }
-        }
-
-		$outer = $this->_blocks[$block];
-
-		// processing of the inner blocks.
-		$this->parseChildBlocks( $block, $this->_children, $outer, $fakeParse, $empty );
-
-
-		// add "global" variables to the static array
-        foreach ($this->_globalVariables as $allowedvar => $value) {
-            if (isset($this->_blockVariables[$block][$allowedvar])) {
-                $vars[$this->openingDelimiter . $allowedvar . $this->closingDelimiter] = $value;
-            }
-        }
-        // if we are inside a hidden block, don't bother
-		if ( !$fakeParse )
-		{
-			// When there are global variables to replace and there is no
-			// recursive call to be made or there are functions replacements.
-			// setup for those replacements to be done.
-			if ( \count($vars) > 0 && (!$recursive || !empty($this->_functions[$block])))
-			{
-				$varKeys = \array_keys( $vars );
-				if ( $this->_options['preserve_data'] )
-				{
-					$varValues = \array_map(
-						[$this, '_preserveOpeningDelimiter'],
-						\array_values( $vars )
-					);
-				}
-				else
-				{
-					$varValues = \array_values( $vars );
-				}
-			}
-
-            // check whether the block is considered "empty" and append parsed content if not
-            if (!$empty || '__global__' == $block
-                || !$this->removeEmptyBlocks || isset($this->_touchedBlocks[$block])
-            ) {
-                // perform callbacks
-                if (!empty($this->_functions[$block])) {
-                    foreach ($this->_functions[$block] as $id => $data) {
-                        $placeholder = $this->openingDelimiter . '__function_' . $id . '__' . $this->closingDelimiter;
-                        // do not waste time calling function more than once
-                        if (!isset($vars[$placeholder])) {
-                            $args         = [];
-                            $preserveArgs = !empty($this->_callback[$data['name']]['preserveArgs']);
-                            foreach ($data['args'] as $arg) {
-                                $args[] = (empty($varKeys) || $preserveArgs)
-                                          ? $arg
-                                          : str_replace($varKeys, $varValues, $arg);
-                            }
-                            if (isset($this->_callback[$data['name']]['data'])) {
-                                $res = call_user_func_array($this->_callback[$data['name']]['data'], $args);
-                            } else {
-                                $res = isset($args[0])? $args[0]: '';
-                            }
-                            $outer = str_replace($placeholder, $res, $outer);
-                            // save the result to variable cache, it can be requested somewhere else
-                            $vars[$placeholder] = $res;
-                        }
-                    }
-                }
-                // substitute variables only on non-recursive call, thus all
-                // variables from all inner blocks get substituted
-                if (!$recursive && !empty($varKeys)) {
-                    $outer = str_replace($varKeys, $varValues, $outer);
-                }
-
-                $this->_parsedBlocks[$block] .= $outer;
-                if (isset($this->_touchedBlocks[$block])) {
-                    unset($this->_touchedBlocks[$block]);
-                }
-            }
-        }
-
-		// When it is the global block flag it.
-		if ( strcmp('__global__', $block) === 0 )
-		{
-			$this->flagGlobalParsed = TRUE;
-		}
-
-        return $empty;
-    }
-
+	/**
+	 * Parses the given block.
+	 *
+	 * @param string $block         block name
+	 * @param bool   $recursive true if the function is called recursively (do not set this to true yourself!)
+	 * @param bool   $fakeParse     true if parsing a "hidden" block (do not set this to true yourself!)
+	 *
+	 * @return bool whether the block was "empty"
+	 * @access public
+	 * @see    parseCurrentBlock()
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	function parse( $block = '__global__', $recursive = FALSE, $fakeParse = FALSE ) {
+		return $this->blockParser->parse( $block, $recursive, $fakeParse, $this->_blocks, $this->_parsedBlocks,
+			$this->_blockVariables, $this->_variables, $this->_children, $this->_hiddenBlocks,
+			$this->_globalVariables, $this->_functions, $this->_options, $this->removeEmptyBlocks,
+			$this->_touchedBlocks, $this->_callback );
+	}
 
     /**
      * Sets a variable value.
@@ -2025,27 +1866,6 @@ class Sigma
         $this->_blocks[$block] .= $template;
         return SIGMA_OK;
     } // end func _buildFunctionlist
-
-
-    /**
-     * Replaces an opening delimiter by a special string.
-     *
-     * Used to implement $_options['preserve_data'] logic
-     *
-     * @param string $str String possibly containing opening delimiters
-     *
-     * @access private
-     * @return string
-     */
-    function _preserveOpeningDelimiter($str)
-    {
-        return (false === strpos($str, $this->openingDelimiter))
-               ? $str
-               : str_replace(
-                   $this->openingDelimiter,
-                   $this->openingDelimiter . '%preserved%' . $this->closingDelimiter, $str
-               );
-    }
 
 
     /**

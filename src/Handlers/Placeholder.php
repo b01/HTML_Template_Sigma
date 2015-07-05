@@ -15,7 +15,7 @@ class Placeholder
 	/** @var array Variable names that appear in the block. */
 	private $_blockVariables;
 
-	/** @var string Closing token of a variable placeholder ( {VARIABLE_}_ ). */
+	/** @var string Token that indicates the end of a variable placeholder, a closing curly brace is the default. */
 	private $closingDelimiter;
 
 	/** @var string Regular expression for parsing function names from a template. */
@@ -24,7 +24,7 @@ class Placeholder
 	/** @var array List of functions found in the template. */
 	private $_functions;
 
-	/** @var string Beginning token of a variable placeholder ( _{_VARIABLE} ). */
+	/** @var string Token that indicated the beginning a variable placeholder, an open curly brace is the default. */
 	private $openingDelimiter;
 
 	/** @var string RegExp matching a variable placeholder in the template. Per default "sm" is used as the regexp
