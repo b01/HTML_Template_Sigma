@@ -1,6 +1,7 @@
 <?php
 
 namespace Kshabazz\Sigma\Parsers;
+use Kshabazz\Sigma\SigmaException;
 
 /**
  * Class Placeholder
@@ -54,7 +55,7 @@ class Placeholder
 	 * @param array $blocks
 	 * @param array $children
 	 * @return mixed SIGMA_OK on success, error object on failure
-	 * @see    _buildFunctionlist()
+	 * @see parseFunctions()
 	 */
 	public function parse( &$blockVariables, &$functions, &$blocks, &$children, $block = '__global__' )
 	{
@@ -83,11 +84,7 @@ class Placeholder
 			}
 		}
 
-		$res = $this->parseFunctions( $block, $blocks, $blockVariables, $functions );
-		if ( SIGMA_OK != $res )
-		{
-			return $res;
-		}
+		$blocks[$block] = $this->parseFunctions( $blocks[$block], $blockVariables[$block], $functions[$block] );
 
 		if ( isset($children[$block]) && \is_array($children[$block]) )
 		{
@@ -109,25 +106,34 @@ class Placeholder
 	 *
 	 * @param string $block Block name
 	 * @return mixed SIGMA_OK on success, error object on failure
-	 * @see    _buildBlockVariables()
+	 * @see _buildBlockVariables()
 	 */
-	private function parseFunctions( $block, &$blocks, &$blockVariables, &$functions )
+	/**
+	 * @param $template
+	 * @param $blockVariable
+	 * @param $functions
+	 * @return string Block template with functions parsed.
+	 * @sideeffects Alters all parameters passed in.
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 */
+	private function parseFunctions( &$template, &$blockVariable, &$functions )
 	{
-		$template = $blocks[$block];
-		$blocks[$block] = '';
+		$parsedTemplate = '';
 
-		while (preg_match($this->functionRegExp, $template, $regs)) {
-			$blocks[$block] .= substr($template, 0, strpos($template, $regs[0]));
-			$template = substr($template, strpos($template, $regs[0]) + strlen($regs[0]));
+		while ( \preg_match($this->functionRegExp, $template, $regs) )
+		{
+			$parsedTemplate .= \substr( $template, 0, \strpos($template, $regs[0]) );
+			$template = \substr( $template, \strpos($template, $regs[0]) + \strlen($regs[0]) );
 
-			$state    = 1;
-			$arg      = '';
-			$quote    = '';
+			$state = 1;
+			$arg = '';
+			$quote = '';
 			$funcData = [
 				'name' => $regs[1],
 				'args' => []
 			];
-			for ($i = 0, $len = strlen($template); $i < $len; $i++) {
+
+			for ($i = 0, $len = \strlen($template); $i < $len; $i++) {
 				$char = $template[$i];
 				switch ($state) {
 					case 0:
@@ -216,29 +222,29 @@ class Placeholder
 				}
 			}
 
-			if (0 != $state) {
-				return new \Exception(
-					$this->errorMessage(
-						SIGMA_CALLBACK_SYNTAX_ERROR,
-						(empty($error) ? 'Unexpected end of input' : $error)
-						. ' in ' . $regs[0] . \substr( $template, 0, $i )
-					),
-					SIGMA_CALLBACK_SYNTAX_ERROR
+			if ( 0 != $state ) {
+				$errorMessage = empty( $error ) ? 'Unexpected end of input' : $error;
+				$errorMessage .= ' in ' . $regs[0] . \substr( $template, 0, $i );
+				throw new SigmaException(
+					SigmaException::CALLBACK_SYNTAX_ERROR,
+					NULL,
+					$errorMessage
 				);
 
 			} else {
 				$funcId   = 'f' . \substr( \md5(\serialize($funcData)), 0, 10 );
 				$template = \substr( $template, $i );
 
-				$blocks[$block] .= $this->openingDelimiter . '__function_' . $funcId
+				$parsedTemplate .= $this->openingDelimiter . '__function_' . $funcId
 					. '__' . $this->closingDelimiter;
-				$blockVariables[$block]['__function_' . $funcId . '__'] = TRUE;
-				$functions[$block][$funcId] = $funcData;
+				$blockVariable['__function_' . $funcId . '__'] = TRUE;
+				$functions[$funcId] = $funcData;
 			}
-		} // while
+		}
 
-		$blocks[$block] .= $template;
+		$parsedTemplate .= $template;
 
-		return SIGMA_OK;
+		return $parsedTemplate;
 	}
 }
+?>

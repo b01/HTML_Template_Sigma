@@ -153,6 +153,62 @@ class Sigma
 	private $placeholder;
 
 	/**
+	 * Adds a block to the template changing a variable placeholder to a block placeholder.
+	 *
+	 * This means that a new block will be integrated into the template in
+	 * place of a variable placeholder. The variable placeholder will be
+	 * removed and the new block will behave in the same way as if it was
+	 * inside the original template.
+	 *
+	 * The block content must not start with <!-- BEGIN blockName --> and end with
+	 * <!-- END blockName -->, if it does the error will be thrown.
+	 *
+	 * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
+	 * @param string $block name of the block to be added
+	 * @param string $pContent content of the block
+	 *
+	 * @access public
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @throws SigmaException
+	 * @see addBlockfile()
+	 */
+	function addBlock( $placeholder, $block, $pContent )
+	{
+		// Look up the placeholder to see if it exists.
+		$parents = $this->_findParentBlocks( $placeholder );
+		// When the placeholder does not exist.
+		if (0 == count($parents))
+		{
+			throw new SigmaException( SigmaException::PLACEHOLDER_NOT_FOUND, [$placeholder] );
+		}
+		// When the placeholder is not unique.
+		if (count($parents) > 1)
+		{
+			throw new SigmaException( SigmaException::PLACEHOLDER_DUPLICATE, [$placeholder] );
+		}
+
+		// Add the block.
+		$this->blockParser->addBlock( $placeholder, $block, $pContent, $this->_blocks, $this->_blockVariables );
+
+		// Remove all HTML comments.
+		$content = \preg_replace( $this->commentRegExp, '', $pContent );
+		// Format the content as a block.
+		$content = \sprintf( "<!-- BEGIN {$block} -->%s<!-- END {$block} -->", $content );
+		// Add the block.
+		$this->blocks->buildBlocks( $content );
+
+		// Update blocks.
+		$this->_blocks = $this->blocks->getBlocks();
+		$this->_children = $this->blocks->getChildrenData();
+
+		// Find the parent block of the placeholder so that it bc
+		$this->_replacePlaceholder( $parents[ 0 ], $placeholder, $block );
+
+		return $this->placeholder->parse( $this->_blockVariables, $this->_functions,
+			$this->_blocks, $this->_children, $block );
+	}
+
+	/**
 	 * Sets the directory to cache "prepared" templates in, the directory should be writable for PHP.
 	 *
 	 * The "prepared" template contains an internal representation of template
@@ -177,11 +233,7 @@ class Sigma
 		// Report when invalid values are passed as an argument.
 		if ( !\is_string($pDirectory) && !\is_null($pDirectory) )
 		{
-			throw new SigmaException(
-				-17,
-				NULL,
-				sprintf( 'Argument passed to %s::%s() was invalid', __CLASS__, __FUNCTION__ )
-			);
+			throw new SigmaException( SigmaException::INVALID_ARGUMENT, [__CLASS__, __FUNCTION__] );
 		}
 
 		if ( empty($pDirectory) )
@@ -422,12 +474,6 @@ class Sigma
     var $includeRegExp = '#<!--\s+INCLUDE\s+(\S+)\s+-->#im';
 
     /**
-     * RegExp used to find (and remove) comments in the template
-     * @var  string
-     */
-    var $commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
-
-    /**
      * Files queued for inclusion
      * @var    array
      * @access private
@@ -503,7 +549,7 @@ class Sigma
     /**
      * Returns a textual error message for an error code
      *
-     * @param integer|PEAR_Error $code error code or another error object for code reuse
+     * @param integer| $code error code or another error object for code reuse
      * @param string             $data additional data to insert into message
      *
      * @access public
@@ -673,12 +719,13 @@ class Sigma
      * @param string $block block name
      *
      * @access public
-     * @return mixed SIGMA_OK on success, error object on failure
+     * @return mixed SIGMA_OK on success
+	 * @throws \Exception Error object on failure
      */
     function setCurrentBlock($block = '__global__')
     {
         if (!isset($this->_blocks[$block])) {
-            return new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
+            throw new \Exception($this->errorMessage(SIGMA_BLOCK_NOT_FOUND, $block), SIGMA_BLOCK_NOT_FOUND);
         }
         $this->currentBlock = $block;
         return SIGMA_OK;
@@ -852,67 +899,6 @@ class Sigma
 		return TRUE;
     }
 
-
-    /**
-     * Adds a block to the template changing a variable placeholder to a block placeholder.
-     *
-     * This means that a new block will be integrated into the template in
-     * place of a variable placeholder. The variable placeholder will be
-     * removed and the new block will behave in the same way as if it was
-     * inside the original template.
-     *
-     * The block content must not start with <!-- BEGIN blockname --> and end with
-     * <!-- END blockname -->, if it does the error will be thrown.
-     *
-     * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
-     * @param string $block name of the block to be added
-     * @param string $pContent content of the block
-     *
-     * @access public
-     * @return mixed SIGMA_OK on success, error object on failure
-     * @throws SigmaException
-     * @see addBlockfile()
-     */
-    function addBlock( $placeholder, $block, $pContent )
-    {
-		// Don't replace a block that already exists, there is a separate
-		// method for that.
-		if ( isset($this->_blocks[$block]) )
-		{
-			return new SigmaException( SigmaException::BLOCK_EXISTS, [$block] );
-		}
-
-		$parents = $this->_findParentBlocks($placeholder);
-		if ( \count($parents) === 0 )
-		{
-			return new SigmaException( SigmaException::PLACEHOLDER_NOT_FOUND, [$placeholder] );
-		}
-		// I guess this occurs when you use the same placeholder name in
-		// multiple blocks, in the same template.
-		// TODO: add unit test for this.
-		else if ( \count($parents) > 1 )
-		{
-			return new SigmaException( SigmaException::PLACEHOLDER_DUPLICATE, [$placeholder] );
-		}
-
-		// Remove all HTML comments.
-		$content = \preg_replace( $this->commentRegExp, '', $pContent );
-		// Format the content as a block.
-		$content = \sprintf( "<!-- BEGIN {$block} -->%s<!-- END {$block} -->", $content );
-		// Add the block.
-		$this->blocks->buildBlocks( $content );
-
-		// Update blocks.
-		$this->_blocks = $this->blocks->getBlocks();
-		$this->_children = $this->blocks->getChildrenData();
-
-		// Find the parent block of the placeholder so that it bc
-        $this->_replacePlaceholder($parents[0], $placeholder, $block);
-        return $this->placeholder->parse( $this->_blockVariables, $this->_functions,
-			$this->_blocks, $this->_children,$block );
-    }
-
-
     /**
      * Adds a block taken from a file to the template, changing a variable placeholder
      * to a block placeholder.
@@ -1048,6 +1034,8 @@ class Sigma
      * @return string Name of the (first) block that contains the specified placeholder.
      *                If the placeholder was not found an empty string is returned.
      * @throws PEAR_Error
+	 * @todo return all the parents that contain the placeholder
+	 * @todo Decide to change the name of this function to getBlocksWithPlaceholder or return a boolean.
      */
     function placeholderExists($placeholder, $block = '')
     {

@@ -24,7 +24,8 @@ class SigmaException extends \Exception
 		INVALID_CALLBACK = -13,
 		CALLBACK_SYNTAX_ERROR = -14,
 		BAD_TEMPLATE = -15,
-		BAD_CACHE_DIR = -16;
+		BAD_CACHE_DIR = -16,
+		INVALID_ARGUMENT = -17;
 	/**#@-*/
 
 	private $errorMessages = [
@@ -40,7 +41,8 @@ class SigmaException extends \Exception
 		self::INVALID_CALLBACK      => 'Callback does not exist',
 		self::CALLBACK_SYNTAX_ERROR => 'Cannot parse template function: %s',
 		self::BAD_TEMPLATE          => 'The template file does not exists: "%s".',
-		self::BAD_CACHE_DIR         => 'Directory does not exists, cannot set cache directory to: "%s".'
+		self::BAD_CACHE_DIR         => 'Directory does not exists, cannot set cache directory to: "%s".',
+		self::BAD_CACHE_DIR         => 'Argument passed to %s::%s() was invalid'
 	];
 
 	/**

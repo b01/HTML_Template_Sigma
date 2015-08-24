@@ -18,6 +18,9 @@ class Block
 	/** @var string Token that indicates the end of a variable placeholder, a closing curly brace is the default. */
 	private $closingDelimiter;
 
+	/** @var string RegExp used to find (and remove) comments in the template */
+	private $commentRegExp = '#<!--\s+COMMENT\s+-->.*?<!--\s+/COMMENT\s+-->#sm';
+
 	/** @var string Token that indicated the beginning a variable placeholder, an open curly brace is the default. */
 	private $openingDelimiter;
 
@@ -28,6 +31,111 @@ class Block
 	{
 		$this->closingDelimiter = '}';
 		$this->openingDelimiter = '{';
+	}
+
+//	/**
+//	 * Adds a block to the template changing a variable placeholder to a block placeholder.
+//	 *
+//	 * This means that a new block will be integrated into the template in
+//	 * place of a variable placeholder. The variable placeholder will be
+//	 * removed and the new block will behave in the same way as if it was
+//	 * inside the original template.
+//	 *
+//	 * The block content must not start with <!-- BEGIN blockName --> nor end with
+//	 * <!-- END blockName -->, if it does the error will be thrown.
+//	 *
+//	 * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
+//	 * @param string $block name of the block to be added
+//	 * @param string $pContent content of the block
+//	 *
+//	 * @access public
+//	 * @return mixed SIGMA_OK on success, error object on failure
+//	 * @throws SigmaException
+//	 * @see addBlockfile()
+//	 */
+//	function addBlock( $placeholder, $block, $pContent )
+//	{
+//		// Don't replace a block that already exists, there is a separate
+//		// method for that.
+//		if ( isset($this->_blocks[$block]) )
+//		{
+//			return new SigmaException( SigmaException::BLOCK_EXISTS, [$block] );
+//		}
+//
+//		$parents = $this->_findParentBlocks($placeholder);
+//		if ( \count($parents) === 0 )
+//		{
+//			return new SigmaException( SigmaException::PLACEHOLDER_NOT_FOUND, [$placeholder] );
+//		}
+//		// I guess this occurs when you use the same placeholder name in
+//		// multiple blocks, in the same template.
+//		// TODO: add unit test for this.
+//		else if ( \count($parents) > 1 )
+//		{
+//			return new SigmaException( SigmaException::PLACEHOLDER_DUPLICATE, [$placeholder] );
+//		}
+//
+//		// Remove all HTML comments.
+//		$content = \preg_replace( $this->commentRegExp, '', $pContent );
+//		// Format the content as a block.
+//		$content = \sprintf( "<!-- BEGIN {$block} -->%s<!-- END {$block} -->", $content );
+//		// Add the block.
+//		$this->blocks->buildBlocks( $content );
+//
+//		// Update blocks.
+//		$this->_blocks = $this->blocks->getBlocks();
+//		$this->_children = $this->blocks->getChildrenData();
+//
+//		// Find the parent block of the placeholder so that it bc
+//		$this->_replacePlaceholder($parents[0], $placeholder, $block);
+//
+//		return $this->placeholder->parse( $this->_blockVariables, $this->_functions,
+//			$this->_blocks, $this->_children,$block );
+//	}
+
+	/**
+	 * Adds a block to the template changing a variable placeholder to a block placeholder.
+	 *
+	 * This means that a new block will be integrated into the template in
+	 * place of a variable placeholder. The variable placeholder will be
+	 * removed and the new block will behave in the same way as if it was
+	 * inside the original template.
+	 *
+	 * The block content must not start with <!-- BEGIN blockname --> and end with
+	 * <!-- END blockname -->, if it does the error will be thrown.
+	 *
+	 * @param string $placeholder name of the variable placeholder, the name must be unique within the template.
+	 * @param string $block       name of the block to be added
+	 * @param string $template    content of the block
+	 *
+	 * @access public
+	 * @return mixed SIGMA_OK on success, error object on failure
+	 * @throws \Kshabazz\Sigma\SigmaException
+	 * @see    addBlockfile()
+	 */
+	function addBlock( $placeholder, $block, $template, &$blocks, &$blockVariables )
+	{
+		// Cannot add a block that already exists.
+		if (isset($blocks[$block]))
+		{
+			throw new SigmaException( SigmaException::BLOCK_EXISTS, [$block] );
+		}
+//
+//		$this->_buildBlocks(
+//			"<!-- BEGIN {$block} -->" .
+//			preg_replace($this->commentRegExp, '', $template) .
+//			"<!-- END {$block} -->"
+//		);
+
+		$this->parse(
+			"<!-- BEGIN {$block} -->" .
+			preg_replace($this->commentRegExp, '', $template) .
+			"<!-- END {$block} -->"
+		);
+
+		$this->_replacePlaceholder($parents[0], $placeholder, $block);
+
+		return $this->_buildBlockVariables($block);
 	}
 
 	/**
@@ -42,7 +150,7 @@ class Block
 	 * @see    parseCurrentBlock()
 	 * @throws \Kshabazz\Sigma\SigmaException
 	 */
-	function parse( $block = '__global__', $recursive = FALSE, $fakeParse = FALSE, &$blocks, &$parsedBlocks,
+	public function parse( $block = '__global__', $recursive = FALSE, $fakeParse = FALSE, &$blocks, &$parsedBlocks,
 					&$blockVariables, &$variables, &$children, &$hiddenBlocks, &$globalVariables, &$functions,
 					&$options, &$removeEmptyBlocks, &$touchedBlocks, &$callback)
 	{
@@ -214,6 +322,25 @@ class Block
 		return TRUE;
 	}
 
+	/**
+	 * Returns the names of the blocks where the variable placeholder appears
+	 *
+	 * @param string $variable variable name
+	 *
+	 * @access private
+	 * @return array block names
+	 * @see    addBlock(), addBlockfile(), placeholderExists()
+	 */
+	function _findParentBlocks($variable, &$blockVariables)
+	{
+		$parents = [];
+		foreach ($blockVariables as $blockname => $varnames) {
+			if (!empty($varnames[$variable])) {
+				$parents[] = $blockname;
+			}
+		}
+		return $parents;
+	}
 
 	/**
 	 * Replaces an opening delimiter by a special string.
